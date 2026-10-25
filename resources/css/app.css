@@ -1,0 +1,148 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ====================================================================
+   TEMA SMARTCASH
+   Tempel SELURUH isi file ini di bagian PALING BAWAH resources/css/app.css
+   (setelah @tailwind utilities;).
+
+   Cara kerja: warna di Tailwind (blue, slate, red, emerald, amber, sky, gray)
+   dibaca dari variabel CSS di bawah. Mengganti atribut data-theme pada <html>
+   langsung mengubah warna SELURUH halaman, tanpa mengedit file halaman satu per satu.
+
+   Tema: samudra (bawaan) | bumi (Earth Tone) | noir (Monokrom) | malam (gelap)
+   ==================================================================== */
+
+/* ---------- TEMA 1: SAMUDRA (biru, bawaan) ---------- */
+:root {
+    /* warna utama (menggantikan palet "blue") */
+    --p-50: 239 246 255;  --p-100: 219 234 254; --p-200: 191 219 254; --p-300: 147 197 253; --p-400: 96 165 250;
+    --p-500: 59 130 246;  --p-600: 37 99 235;   --p-700: 29 78 216;   --p-800: 30 64 175;   --p-900: 30 58 138;
+    /* warna aksen (menggantikan palet "sky") */
+    --a-300: 125 211 252; --a-400: 56 189 248;  --a-500: 14 165 233;
+    /* sidebar / footer, warna judul, dan banner dashboard */
+    --navy: 22 37 90;     --ink: 20 33 79;
+    --banner: 37 99 235;  --banner-card: 29 78 216;
+    /* netral (menggantikan "slate" dan "gray") */
+    --s-50: 248 250 252;  --s-100: 241 245 249; --s-200: 226 232 240; --s-300: 203 213 225; --s-400: 148 163 184;
+    --s-500: 100 116 139; --s-600: 71 85 105;   --s-700: 51 65 85;    --s-800: 30 41 59;    --s-900: 15 23 42;
+    /* permukaan kartu (pengganti bg-white) */
+    --surface: 255 255 255;
+    /* warna status */
+    --e-50: 236 253 245; --e-100: 209 250 229; --e-200: 167 243 208; --e-300: 110 231 183; --e-400: 52 211 153;
+    --e-500: 16 185 129; --e-600: 5 150 105;   --e-700: 4 120 87;    --e-800: 6 95 70;
+    --r-50: 254 242 242; --r-100: 254 226 226; --r-200: 254 202 202; --r-300: 252 165 165;
+    --r-500: 239 68 68;  --r-600: 220 38 38;   --r-700: 185 28 28;   --r-800: 153 27 27;
+    --am-50: 255 251 235; --am-100: 254 243 199; --am-400: 251 191 36; --am-600: 217 119 6;
+    --am-700: 180 83 9;   --am-800: 146 64 14;  --am-950: 69 26 3;
+}
+
+/* ---------- TEMA 2: BUMI (Earth Tone / Organik: sage & terracotta) ---------- */
+html[data-theme='bumi'] {
+    /* sage green sebagai warna utama */
+    --p-50: 244 247 240;  --p-100: 232 238 224; --p-200: 211 222 197; --p-300: 178 197 158; --p-400: 143 168 120;
+    --p-500: 112 138 92;  --p-600: 94 117 75;   --p-700: 76 96 61;    --p-800: 62 78 51;    --p-900: 50 63 42;
+    /* terracotta sebagai aksen */
+    --a-300: 232 170 140; --a-400: 214 132 98;  --a-500: 193 103 70;
+    /* cokelat tanah untuk sidebar dan judul, banner hijau sage */
+    --navy: 59 50 40;     --ink: 58 50 40;
+    --banner: 94 117 75;  --banner-card: 70 88 56;
+    /* netral hangat: krem dan pasir */
+    --s-50: 250 248 243;  --s-100: 243 239 230; --s-200: 232 226 214; --s-300: 214 206 190; --s-400: 163 153 138;
+    --s-500: 120 112 99;  --s-600: 92 85 74;    --s-700: 70 64 55;    --s-800: 48 43 36;    --s-900: 33 29 24;
+    --surface: 255 253 249;
+}
+
+/* ---------- TEMA 3: NOIR (Monokrom: hitam, putih, abu-abu) ----------
+   Murni gradasi hitam-putih-abu. Warna status (sukses/bahaya/peringatan)
+   juga dibuat abu-abu dan dibedakan lewat tingkat gelap-terang. */
+html[data-theme='noir'] {
+    --p-50: 250 250 250;  --p-100: 245 245 245; --p-200: 229 229 229; --p-300: 212 212 212; --p-400: 163 163 163;
+    --p-500: 115 115 115; --p-600: 23 23 23;    --p-700: 0 0 0;       --p-800: 38 38 38;    --p-900: 10 10 10;
+    --a-300: 212 212 212; --a-400: 163 163 163; --a-500: 115 115 115;
+    --navy: 10 10 10;     --ink: 10 10 10;
+    --banner: 10 10 10;   --banner-card: 38 38 38;
+    --s-50: 250 250 250;  --s-100: 245 245 245; --s-200: 229 229 229; --s-300: 212 212 212; --s-400: 163 163 163;
+    --s-500: 115 115 115; --s-600: 82 82 82;    --s-700: 64 64 64;    --s-800: 38 38 38;    --s-900: 23 23 23;
+    --surface: 255 255 255;
+
+    --e-50: 250 250 250;  --e-100: 238 238 238; --e-200: 212 212 212; --e-300: 163 163 163; --e-400: 115 115 115;
+    --e-500: 64 64 64;    --e-600: 38 38 38;    --e-700: 23 23 23;    --e-800: 10 10 10;
+    --r-50: 250 250 250;  --r-100: 238 238 238; --r-200: 212 212 212; --r-300: 163 163 163;
+    --r-500: 38 38 38;    --r-600: 10 10 10;    --r-700: 0 0 0;       --r-800: 0 0 0;
+    --am-50: 250 250 250; --am-100: 238 238 238; --am-400: 140 140 140; --am-600: 82 82 82;
+    --am-700: 64 64 64;   --am-800: 38 38 38;   --am-950: 10 10 10;
+}
+
+/* ---------- TEMA 4: MALAM (gelap) ---------- */
+html[data-theme='malam'] {
+    color-scheme: dark;
+
+    --p-50: 23 37 84;     --p-100: 30 50 110;   --p-200: 37 64 140;   --p-300: 59 100 190;   --p-400: 96 165 250;
+    --p-500: 59 130 246;  --p-600: 37 99 235;   --p-700: 147 197 253; --p-800: 191 219 254; --p-900: 219 234 254;
+    --a-300: 125 211 252; --a-400: 56 189 248;  --a-500: 14 165 233;
+    --navy: 10 17 36;     --ink: 226 232 240;
+    --banner: 30 58 138;  --banner-card: 23 37 84;
+
+    --s-50: 11 18 32;     --s-100: 30 41 59;    --s-200: 45 58 82;    --s-300: 71 85 105;    --s-400: 148 163 184;
+    --s-500: 156 170 190; --s-600: 186 198 214; --s-700: 203 213 225; --s-800: 226 232 240;  --s-900: 241 245 249;
+    --surface: 17 26 46;
+
+    --e-50: 6 40 32;      --e-100: 8 60 48;     --e-200: 16 90 68;    --e-300: 110 231 183;  --e-400: 52 211 153;
+    --e-500: 16 185 129;  --e-600: 52 211 153;  --e-700: 110 231 183; --e-800: 167 243 208;
+    --r-50: 63 20 20;     --r-100: 82 24 24;    --r-200: 127 29 29;   --r-300: 185 28 28;
+    --r-500: 239 68 68;   --r-600: 220 38 38;   --r-700: 252 165 165; --r-800: 254 202 202;
+    --am-50: 56 38 8;     --am-100: 77 52 10;   --am-400: 251 191 36; --am-600: 252 211 77;
+    --am-700: 253 224 71; --am-800: 254 240 138; --am-950: 69 26 3;
+}
+
+/* ---------- warna heksa yang dipakai langsung di halaman ---------- */
+.bg-\[\#16255a\] { background-color: rgb(var(--navy)); }
+.text-\[\#14214f\] { color: rgb(var(--ink)); }
+.group:hover .group-hover\:text-\[\#16255a\] { color: rgb(var(--navy)); }
+
+/* ---------- permukaan kartu: bg-white mengikuti tema (berlaku di semua tema) ----------
+   bg-white/20, /10, /5 (lapisan kaca di atas sidebar/banner) sengaja tidak diubah. */
+.bg-white,
+.hover\:bg-white:hover,
+.focus\:bg-white:focus { background-color: rgb(var(--surface)); }
+.bg-white\/90 { background-color: rgb(var(--surface) / 0.9); }
+.bg-white\/80 { background-color: rgb(var(--surface) / 0.8); }
+.bg-white\/60 { background-color: rgb(var(--surface) / 0.6); }
+
+/* ---------- penyesuaian khusus tema MALAM ----------
+   :where() dipakai agar prioritas rendah, jadi hover/focus tetap menang. */
+html[data-theme='malam'] body { background-color: rgb(var(--s-50)); color: rgb(var(--s-900)); }
+
+/* kolom isian: latar dan teks selalu kontras, termasuk saat fokus/ditekan */
+:where(html[data-theme='malam']) :is(input, select, textarea):not([type='checkbox'], [type='radio'], [type='range'], [type='file']) {
+    background-color: rgb(var(--surface));
+    color: rgb(var(--s-900));
+}
+html[data-theme='malam'] :is(input, select, textarea):not([type='checkbox'], [type='radio'], [type='range'], [type='file']):focus {
+    background-color: rgb(var(--surface)) !important;
+    color: rgb(var(--s-900)) !important;
+}
+html[data-theme='malam'] input:-webkit-autofill {
+    -webkit-text-fill-color: rgb(var(--s-900));
+    -webkit-box-shadow: 0 0 0 1000px rgb(var(--surface)) inset;
+}
+
+/* warna yang harus tetap gelap/terang walau tema gelap */
+:where(html[data-theme='malam']) .bg-blue-700,
+:where(html[data-theme='malam']) .hover\:bg-blue-700:hover { background-color: rgb(29 78 216); }
+:where(html[data-theme='malam']) .group:hover .group-hover\:bg-blue-700 { background-color: rgb(29 78 216); }
+:where(html[data-theme='malam']) .hover\:bg-red-700:hover { background-color: rgb(185 28 28); }
+:where(html[data-theme='malam']) .text-blue-100 { color: rgb(219 234 254); }
+:where(html[data-theme='malam']) .text-slate-300 { color: rgb(203 213 225); }
+:where(html[data-theme='malam']) .bg-slate-700,
+:where(html[data-theme='malam']) .bg-slate-800,
+:where(html[data-theme='malam']) .hover\:bg-slate-800:hover { background-color: rgb(51 65 85); }
+:where(html[data-theme='malam']) .bg-slate-900 { background-color: rgb(0 0 0); }
+:where(html[data-theme='malam']) .bg-slate-900\/50 { background-color: rgb(0 0 0 / 0.5); }
+
+/* teks biru lebih terang agar terbaca di latar gelap */
+:where(html[data-theme='malam']) .text-blue-600,
+:where(html[data-theme='malam']) .hover\:text-blue-600:hover { color: rgb(96 165 250); }
+:where(html[data-theme='malam']) .group:hover .group-hover\:text-blue-600 { color: rgb(96 165 250); }
