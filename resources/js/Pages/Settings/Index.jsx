@@ -232,7 +232,14 @@ const Field = ({ label, error, hint, right, icon, className = '', children }) =>
             {children}
         </div>
         {hint && !error && <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">{hint}</p>}
-        {error && <p className="sc-pop text-red-500 text-[11px] font-semibold mt-1.5">{error}</p>}
+        {error && (
+            <p className="sc-pop flex items-start gap-1.5 text-red-500 text-[11px] font-semibold mt-1.5 leading-snug">
+                <span className="mt-px shrink-0">
+                    <I.Alert className="w-3.5 h-3.5" />
+                </span>
+                <span>{error}</span>
+            </p>
+        )}
     </div>
 );
 
@@ -252,11 +259,15 @@ const FormCard = ({ icon, title, desc, onSubmit, footer, children }) => (
 );
 
 /* Footer kartu: status di kiri, tombol di kanan */
-const FormFooter = ({ processing, changed, onReset, label = 'Simpan Perubahan', idleText = 'Belum ada perubahan' }) => (
+const FormFooter = ({ processing, changed, onReset, label = 'Simpan Perubahan', idleText = 'Belum ada perubahan', blocked = '' }) => (
     <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 bg-slate-50/80 border-t border-slate-100">
-        <p className={`inline-flex items-center gap-2 text-xs font-medium transition-colors ${changed ? 'text-amber-700' : 'text-slate-400'}`}>
-            <span className={`w-2 h-2 rounded-full ${changed ? 'bg-amber-400' : 'bg-slate-300'}`} />
-            {changed ? 'Ada perubahan yang belum disimpan' : idleText}
+        <p
+            className={`inline-flex items-center gap-2 text-xs font-medium transition-colors ${
+                blocked ? 'text-red-600' : changed ? 'text-amber-700' : 'text-slate-400'
+            }`}
+        >
+            <span className={`w-2 h-2 rounded-full ${blocked ? 'bg-red-500' : changed ? 'bg-amber-400' : 'bg-slate-300'}`} />
+            {blocked || (changed ? 'Ada perubahan yang belum disimpan' : idleText)}
         </p>
         <div className="flex items-center gap-2 sm:justify-end">
             {changed && !processing && onReset && (
@@ -271,7 +282,7 @@ const FormFooter = ({ processing, changed, onReset, label = 'Simpan Perubahan', 
             )}
             <button
                 type="submit"
-                disabled={processing || !changed}
+                disabled={processing || !changed || Boolean(blocked)}
                 className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
             >
                 {processing && <Spinner />}
@@ -323,8 +334,68 @@ const isLinkValue = (s) => /^(https?:)?\/\//i.test(s) || s.startsWith('/') || s.
 const resolveBanner = (b) => (!b ? '' : isLinkValue(String(b)) ? String(b) : `/storage/${String(b).replace(/^\/+/, '')}`);
 const MAX_BANNER_MB = 2;
 
+/* ------------------------------------------------------------------ */
+/*  Batas isian & validasi langsung (realtime) untuk identitas toko     */
+/* ------------------------------------------------------------------ */
+const LIMITS = { name: 30, phone: 17, address: 250 };
+
+// karakter yang diperbolehkan per kolom
+const ALLOWED = {
+    name: /^[\p{L}\p{N}\s.,&'’\-()\/+:]$/u,
+    phone: /^[0-9\s+\-()]$/,
+    address: /^[\p{L}\p{N}\s.,\-()\/#:'’&+]$/u,
+};
+
+const charCount = (v) => Array.from(v || '').length;
+const badChars = (v, re) => Array.from(new Set(Array.from(v || '').filter((ch) => !re.test(ch))));
+const listChars = (arr) => arr.slice(0, 6).join('  ');
+
+const checkName = (v) => {
+    if (!v.trim()) return 'Nama toko wajib diisi.';
+    const bad = badChars(v, ALLOWED.name);
+    if (bad.length) return `Simbol tidak diperbolehkan pada nama toko: ${listChars(bad)}. Gunakan huruf, angka, dan tanda . , & ' - ( ) /`;
+    const n = charCount(v);
+    if (n > LIMITS.name) return `Nama toko melebihi batas ${LIMITS.name} karakter (kelebihan ${n - LIMITS.name} karakter).`;
+    return '';
+};
+
+const checkPhone = (v) => {
+    if (!v) return '';
+    const bad = badChars(v, ALLOWED.phone);
+    if (bad.length) return `Karakter tidak diperbolehkan pada nomor telepon: ${listChars(bad)}. Gunakan angka, spasi, tanda -, tanda kurung, dan + di awal.`;
+    if (v.indexOf('+') > 0 || (v.match(/\+/g) || []).length > 1) return 'Tanda + hanya boleh satu kali dan harus berada di awal nomor.';
+    const n = charCount(v);
+    if (n > LIMITS.phone) return `Nomor telepon melebihi batas ${LIMITS.phone} karakter (kelebihan ${n - LIMITS.phone} karakter).`;
+    return '';
+};
+
+const checkAddress = (v) => {
+    if (!v) return '';
+    const bad = badChars(v, ALLOWED.address);
+    if (bad.length) return `Simbol tidak diperbolehkan pada alamat: ${listChars(bad)}. Gunakan huruf, angka, dan tanda . , - / ( ) # : &`;
+    const n = charCount(v);
+    if (n > LIMITS.address) return `Alamat melebihi batas ${LIMITS.address} karakter (kelebihan ${n - LIMITS.address} karakter).`;
+    return '';
+};
+
+/* penanda jumlah karakter, mis. 35/250 (kuning mendekati batas, merah melebihi batas) */
+const Counter = ({ n, max }) => {
+    const over = n > max;
+    const near = !over && n >= Math.ceil(max * 0.9);
+    return (
+        <span className={`text-[11px] tabular-nums ${over ? 'text-red-600 font-bold' : near ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
+            {n}/{max}
+        </span>
+    );
+};
+
+const greetingNow = () => {
+    const h = new Date().getHours();
+    return h < 11 ? 'Selamat pagi' : h < 15 ? 'Selamat siang' : h < 18 ? 'Selamat sore' : 'Selamat malam';
+};
+
 /* Pratinjau banner: meniru tampilan banner di Dashboard */
-function BannerPreview({ src, overlay, storeName, code }) {
+function BannerPreview({ src, overlay, storeName, code, address, phone }) {
     const [failed, setFailed] = useState(false);
     useEffect(() => setFailed(false), [src]);
     const hasImg = Boolean(src) && !failed;
@@ -342,8 +413,23 @@ function BannerPreview({ src, overlay, storeName, code }) {
             <div className="relative flex items-center justify-between gap-4 px-5 py-6 sm:px-7 sm:py-8">
                 <div className="min-w-0">
                     <span className="inline-flex items-center gap-1.5 bg-white/15 text-[10px] font-semibold px-2.5 py-1 rounded-full">{dateText}</span>
-                    <p className="text-lg sm:text-xl font-extrabold mt-2.5 tracking-tight break-words">Selamat datang di {storeName || 'Nama Toko'}</p>
-                    <p className="text-[11px] sm:text-xs text-blue-100 mt-1 leading-relaxed">Kelola penjualan, stok barang, dan staf kasir toko Anda dalam satu panel serbaguna.</p>
+                    <p className="text-lg sm:text-xl font-extrabold mt-2.5 tracking-tight break-words">
+                        {greetingNow()}, selamat datang di {storeName || 'Nama Toko'}
+                    </p>
+                    <div className="mt-2 space-y-1 text-[11px] sm:text-xs text-blue-100">
+                        <p className="flex items-start gap-1.5 leading-relaxed">
+                            <span className="mt-px shrink-0 opacity-90">
+                                <I.Pin className="w-3.5 h-3.5" />
+                            </span>
+                            <span className={`whitespace-pre-line break-words ${address ? '' : 'opacity-60'}`}>{address || 'Alamat toko belum diisi'}</span>
+                        </p>
+                        <p className="flex items-center gap-1.5">
+                            <span className="shrink-0 opacity-90">
+                                <I.Phone className="w-3.5 h-3.5" />
+                            </span>
+                            <span className={phone ? '' : 'opacity-60'}>{phone || 'Nomor telepon belum diisi'}</span>
+                        </p>
+                    </div>
                 </div>
                 <div className={`hidden sm:flex shrink-0 flex-col items-center rounded-lg border border-white/15 px-4 py-2.5 ${hasImg ? 'bg-slate-900/50' : 'bg-[rgb(var(--banner-card))]'}`}>
                     <span className="text-[10px] text-blue-100">Kode Unik Toko</span>
@@ -380,6 +466,22 @@ function StoreProfileSection({ store, showToast }) {
         ...initial,
         banner_file: null,
     });
+
+    // validasi langsung saat mengetik (sebelum tombol simpan ditekan)
+    const [touched, setTouched] = useState({});
+    const touch = (field) => setTouched((t) => ({ ...t, [field]: true }));
+    const issues = {
+        name: checkName(data.name),
+        phone: checkPhone(data.phone),
+        address: checkAddress(data.address),
+    };
+    const hasIssues = Boolean(issues.name || issues.phone || issues.address);
+    // pesan "wajib diisi" baru tampil setelah kolom disentuh; pesan lain langsung tampil
+    const shown = {
+        name: (issues.name && (touched.name || data.name.length > 0) ? issues.name : '') || errors.name,
+        phone: issues.phone || errors.phone,
+        address: issues.address || errors.address,
+    };
 
     const [fileKey, setFileKey] = useState(0);
     const [filePreview, setFilePreview] = useState('');
@@ -431,11 +533,16 @@ function StoreProfileSection({ store, showToast }) {
         setData({ _method: 'put', ...initial, banner_file: null });
         setFileKey((k) => k + 1);
         setFileError('');
+        setTouched({});
         clearErrors();
     };
 
     const submit = (e) => {
         e.preventDefault();
+        if (hasIssues) {
+            setTouched({ name: true, phone: true, address: true });
+            return;
+        }
         post(route('settings.store'), {
             forceFormData: true,
             preserveScroll: true,
@@ -469,7 +576,14 @@ function StoreProfileSection({ store, showToast }) {
             title="Profil Toko & Banner Dashboard"
             desc="Atur identitas toko dan tampilan banner di bagian atas Dashboard."
             onSubmit={submit}
-            footer={<FormFooter processing={processing} changed={changed} onReset={resetAll} />}
+            footer={
+                <FormFooter
+                    processing={processing}
+                    changed={changed}
+                    onReset={resetAll}
+                    blocked={hasIssues ? 'Perbaiki isian yang bertanda merah terlebih dahulu' : ''}
+                />
+            }
         >
             <div className="space-y-7">
                 {/* PRATINJAU BANNER */}
@@ -478,7 +592,14 @@ function StoreProfileSection({ store, showToast }) {
                         <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Pratinjau Banner Dashboard</p>
                         <span className="text-[11px] text-slate-400">Tampil di bagian atas Dashboard</span>
                     </div>
-                    <BannerPreview src={previewSrc} overlay={Number(data.banner_overlay)} storeName={data.name} code={store?.code} />
+                    <BannerPreview
+                        src={previewSrc}
+                        overlay={Number(data.banner_overlay)}
+                        storeName={data.name}
+                        code={store?.code}
+                        address={data.address}
+                        phone={data.phone}
+                    />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-8 border-t border-slate-100 pt-7">
@@ -486,41 +607,57 @@ function StoreProfileSection({ store, showToast }) {
                     <div className="space-y-5 content-start">
                         <p className="text-sm font-bold text-slate-900">Identitas Toko</p>
 
-                        <Field label="Nama Toko / Usaha" error={errors.name} icon={<I.Store className="w-[18px] h-[18px]" />}>
+                        <Field
+                            label="Nama Toko / Usaha"
+                            error={shown.name}
+                            icon={<I.Store className="w-[18px] h-[18px]" />}
+                            right={<Counter n={charCount(data.name)} max={LIMITS.name} />}
+                        >
                             <input
                                 type="text"
                                 value={data.name}
                                 onChange={(e) => setData('name', e.target.value)}
+                                onBlur={() => touch('name')}
                                 placeholder="Contoh: Koperasi SMK 1 Nganjuk"
-                                className={`${inputCls} pl-11 ${errors.name ? errBorder : okBorder}`}
-                                required
+                                aria-invalid={Boolean(shown.name)}
+                                className={`${inputCls} pl-11 ${shown.name ? errBorder : okBorder}`}
                             />
                         </Field>
 
-                        <Field label="Nomor Telepon" error={errors.phone} icon={<I.Phone />}>
+                        <Field
+                            label="Nomor Telepon"
+                            error={shown.phone}
+                            icon={<I.Phone />}
+                            right={<Counter n={charCount(data.phone)} max={LIMITS.phone} />}
+                            hint="Contoh: 0812 3456 7890 atau +62 812 3456 7890"
+                        >
                             <input
                                 type="tel"
+                                inputMode="tel"
                                 value={data.phone}
                                 onChange={(e) => setData('phone', e.target.value)}
+                                onBlur={() => touch('phone')}
                                 placeholder="08xx xxxx xxxx"
-                                maxLength={20}
-                                className={`${inputCls} pl-11 ${errors.phone ? errBorder : okBorder}`}
+                                aria-invalid={Boolean(shown.phone)}
+                                className={`${inputCls} pl-11 ${shown.phone ? errBorder : okBorder}`}
                             />
                         </Field>
 
                         <Field
                             label="Alamat Toko"
-                            error={errors.address}
+                            error={shown.address}
                             icon={<I.Pin />}
-                            right={<span className="text-[11px] text-slate-400">{data.address.length}/500</span>}
+                            right={<Counter n={charCount(data.address)} max={LIMITS.address} />}
+                            hint="Tulis ringkas: jalan, kelurahan, kecamatan, dan kota."
                         >
                             <textarea
                                 rows={4}
-                                maxLength={500}
                                 value={data.address}
                                 onChange={(e) => setData('address', e.target.value)}
+                                onBlur={() => touch('address')}
                                 placeholder="Jl. Merdeka No. 45, Jakarta Pusat"
-                                className={`${inputCls} pl-11 resize-none ${errors.address ? errBorder : okBorder}`}
+                                aria-invalid={Boolean(shown.address)}
+                                className={`${inputCls} pl-11 resize-none ${shown.address ? errBorder : okBorder}`}
                             />
                         </Field>
                     </div>
@@ -632,7 +769,7 @@ function StoreProfileSection({ store, showToast }) {
                         {/* TANPA GAMBAR */}
                         {data.banner_mode === 'none' && (
                             <div className="sc-pop rounded-xl bg-slate-50 border border-slate-200 px-4 py-4 text-xs text-slate-500 leading-relaxed">
-                                Banner memakai <b className="text-blue-700">warna polos</b> bawaan SmartCash. Pilih Unggah Foto atau Link URL untuk memakai gambar sendiri.
+                                Banner memakai <b className="text-blue-700">warna biru polos</b> bawaan SmartCash. Pilih Unggah Foto atau Link URL untuk memakai gambar sendiri.
                             </div>
                         )}
 

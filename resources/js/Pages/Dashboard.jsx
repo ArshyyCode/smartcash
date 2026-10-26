@@ -202,6 +202,17 @@ const IconArrow = ({ className = 'w-4 h-4' }) => (
         <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
 );
+const IconPin = ({ className = 'w-4 h-4' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...ip}>
+        <path d="M12 21s7-5.3 7-11a7 7 0 1 0-14 0c0 5.7 7 11 7 11Z" />
+        <circle cx="12" cy="10" r="2.5" />
+    </svg>
+);
+const IconPhone = ({ className = 'w-4 h-4' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...ip}>
+        <path d="M6.6 3.5 9.5 4l1.3 4-2 1.5a12 12 0 0 0 6.7 6.7l1.5-2 4 1.3.5 2.9a2 2 0 0 1-2 2.3A17.5 17.5 0 0 1 4.3 5.5a2 2 0 0 1 2.3-2Z" />
+    </svg>
+);
 const IconInbox = ({ className = 'w-10 h-10' }) => (
     <svg viewBox="0 0 24 24" className={className} {...ip} strokeWidth={1.6}>
         <path d="M3 13.5 5.6 5.8A2 2 0 0 1 7.5 4.5h9a2 2 0 0 1 1.9 1.3L21 13.5V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4.5Z" />
@@ -475,9 +486,33 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                             <h1 className="text-2xl sm:text-3xl font-extrabold mt-3 tracking-tight">
                                 {greeting}, selamat datang di {store?.name || 'Toko Anda'}
                             </h1>
-                            <p className="text-blue-100 text-sm mt-1.5 max-w-xl leading-relaxed">
-                                Kelola penjualan, stok barang, dan staf kasir toko Anda dalam satu panel serbaguna.
-                            </p>
+                            {store?.address || store?.phone ? (
+                                <div className="mt-3 space-y-1.5 text-sm text-blue-100 max-w-2xl">
+                                    {store?.address && (
+                                        <p className="flex items-start gap-2 leading-relaxed">
+                                            <span className="mt-0.5 shrink-0 opacity-90">
+                                                <IconPin />
+                                            </span>
+                                            <span className="whitespace-pre-line break-words">{store.address}</span>
+                                        </p>
+                                    )}
+                                    {store?.phone && (
+                                        <p className="flex items-center gap-2">
+                                            <span className="shrink-0 opacity-90">
+                                                <IconPhone />
+                                            </span>
+                                            <span>{store.phone}</span>
+                                        </p>
+                                    )}
+                                </div>
+                            ) : isAdmin ? (
+                                <Link
+                                    href={route('settings.index', { tab: 'store' })}
+                                    className="inline-block mt-3 text-xs font-semibold text-blue-100 underline-offset-2 hover:underline hover:text-white transition-colors"
+                                >
+                                    Lengkapi alamat dan nomor telepon toko di Pengaturan
+                                </Link>
+                            ) : null}
                         </div>
 
                         <div

@@ -43,17 +43,30 @@ class SettingsController extends Controller
     {
         $store = Store::findOrFail($request->user()->store_id);
 
+        // samakan baris baru (CRLF -> LF) agar hitungan karakter alamat sama dengan di layar
+        if ($request->has('address')) {
+            $request->merge([
+                'address' => str_replace(["\r\n", "\r"], "\n", (string) $request->input('address')),
+            ]);
+        }
+
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'address' => 'nullable|string|max:500',
-            'phone' => ['nullable', 'string', 'max:20', 'regex:/^[0-9+\-\s()]+$/'],
+            // Batas dan karakter yang diperbolehkan sama dengan validasi langsung di halaman Pengaturan
+            'name' => ['required', 'string', 'max:30', "regex:/^[\\p{L}\\p{N}\\s.,&'’\\-()\\/+:]+$/u"],
+            'address' => ['nullable', 'string', 'max:250', "regex:/^[\\p{L}\\p{N}\\s.,\\-()\\/#:'’&+]+$/u"],
+            'phone' => ['nullable', 'string', 'max:17', 'regex:/^\\+?[0-9\\s\\-()]+$/'],
             'banner_mode' => 'required|in:upload,url,none',
             'banner_file' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
             'banner_url' => 'nullable|url|max:2048',
             'banner_overlay' => 'required|integer|min:0|max:80',
         ], [
             'name.required' => 'Nama toko wajib diisi.',
-            'phone.regex' => 'Nomor telepon hanya boleh berisi angka, spasi, +, -, dan tanda kurung.',
+            'name.max' => 'Nama toko melebihi batas 30 karakter.',
+            'name.regex' => 'Nama toko memuat simbol yang tidak diperbolehkan. Gunakan huruf, angka, dan tanda . , & \' - ( ) /',
+            'address.max' => 'Alamat melebihi batas 250 karakter.',
+            'address.regex' => 'Alamat memuat simbol yang tidak diperbolehkan. Gunakan huruf, angka, dan tanda . , - / ( ) # : &',
+            'phone.max' => 'Nomor telepon melebihi batas 17 karakter.',
+            'phone.regex' => 'Nomor telepon hanya boleh berisi angka, spasi, tanda -, tanda kurung, dan tanda + di awal.',
             'banner_file.image' => 'File banner harus berupa gambar.',
             'banner_file.mimes' => 'Format banner harus JPG, PNG, atau WEBP.',
             'banner_file.max' => 'Ukuran banner maksimal 2 MB.',
