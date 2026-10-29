@@ -53,6 +53,11 @@ export const Icons = {
             <path d="M9.900 9.900a3 3 0 0 0 4.200 4.200" />
         </svg>
     ),
+    ArrowLeft: ({ className = 'w-4 h-4' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip} strokeWidth={2.5}>
+            <path d="M19 12H5M11 6l-6 6 6 6" />
+        </svg>
+    ),
     Arrow: ({ className = 'w-4 h-4' }) => (
         <svg viewBox="0 0 24 24" className={className} {...ip} strokeWidth={2.5}>
             <path d="M5 12h14M13 6l6 6-6 6" />
@@ -75,6 +80,31 @@ export const Spinner = () => (
         <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
 );
+
+/* Terjemahan pesan bawaan Laravel (status & validasi) ke bahasa Indonesia */
+const MESSAGES = {
+    'We have emailed your password reset link.': 'Tautan reset kata sandi sudah dikirim ke email Anda.',
+    'Your password has been reset.': 'Kata sandi Anda berhasil direset. Silakan login dengan kata sandi baru.',
+    "We can't find a user with that email address.": 'Email tidak terdaftar di sistem kami.',
+    'Please wait before retrying.': 'Mohon tunggu sebentar sebelum mencoba lagi.',
+    'This password reset token is invalid.': 'Tautan reset kata sandi tidak valid atau sudah kedaluwarsa. Silakan minta tautan baru.',
+    'The email field is required.': 'Email wajib diisi.',
+    'The email field must be a valid email address.': 'Format email tidak valid.',
+    'The email must be a valid email address.': 'Format email tidak valid.',
+    'The password field is required.': 'Kata sandi wajib diisi.',
+    'The password field confirmation does not match.': 'Konfirmasi kata sandi tidak cocok.',
+    'The password confirmation does not match.': 'Konfirmasi kata sandi tidak cocok.',
+};
+
+export const idMessage = (msg) => {
+    if (!msg || typeof msg !== 'string') return msg;
+    if (MESSAGES[msg]) return MESSAGES[msg];
+    const m = msg.match(/password(?: field)? must be at least (\d+) characters/i);
+    if (m) return `Kata sandi minimal ${m[1]} karakter.`;
+    if (/password.*confirmation does not match/i.test(msg)) return 'Konfirmasi kata sandi tidak cocok.';
+    if (/password.*(letter|uppercase|lowercase|number|symbol|data leak)/i.test(msg)) return 'Kata sandi belum memenuhi syarat keamanan. Gunakan kombinasi huruf besar, huruf kecil, dan angka.';
+    return msg;
+};
 
 /* Input dengan label, ikon kiri, tombol mata (untuk password), dan pesan error */
 export function AuthInput({ id, name, label, icon, error, hint, type = 'text', right, uppercase = false, ...props }) {
@@ -104,7 +134,7 @@ export function AuthInput({ id, name, label, icon, error, hint, type = 'text', r
                     {...props}
                     className={`w-full rounded-xl bg-white py-3 text-sm placeholder:text-slate-400 transition duration-200 focus:ring-4 ${
                         icon ? 'pl-11' : 'pl-4'
-                    } ${isPassword ? 'pr-12' : 'pr-4'} ${uppercase ? 'uppercase tracking-wider font-semibold placeholder:normal-case placeholder:tracking-normal placeholder:font-normal' : ''} ${
+                    } ${isPassword ? 'pr-12' : 'pr-4'} read-only:bg-slate-50 read-only:text-slate-500 read-only:cursor-default ${uppercase ? 'uppercase tracking-wider font-semibold placeholder:normal-case placeholder:tracking-normal placeholder:font-normal' : ''} ${
                         error
                             ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
                             : 'border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-blue-100'
@@ -124,7 +154,7 @@ export function AuthInput({ id, name, label, icon, error, hint, type = 'text', r
             </div>
 
             {hint && !error && <p className="text-[11px] text-slate-400 mt-1.5">{hint}</p>}
-            {error && <p className="sc-pop text-red-500 text-xs font-semibold mt-1.5">{error}</p>}
+            {error && <p className="sc-pop text-red-500 text-xs font-semibold mt-1.5">{idMessage(error)}</p>}
         </div>
     );
 }

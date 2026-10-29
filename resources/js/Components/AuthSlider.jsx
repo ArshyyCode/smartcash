@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { AuthInput, SubmitButton, StrengthMeter, Icons } from '@/Components/AuthUI';
+import { AuthInput, SubmitButton, StrengthMeter, Icons, idMessage } from '@/Components/AuthUI';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 
 /* ================================================================== */
@@ -118,7 +118,7 @@ export default function AuthSlider({ status, canResetPassword }) {
 
     return (
         <GuestLayout>
-            <Head title={isRegister ? 'Daftar Toko Baru' : 'Log in Toko'} />
+            <Head title={isRegister ? 'Daftar Toko Baru' : 'Log in SmartCash'} />
             <style>{css}</style>
 
             {/* ===================== SAKLAR MASUK / DAFTAR ===================== */}
@@ -165,7 +165,7 @@ export default function AuthSlider({ status, canResetPassword }) {
                                 <span className="mt-0.5 w-5 h-5 shrink-0 rounded-full bg-emerald-500 text-white flex items-center justify-center">
                                     <Icons.Check className="w-3 h-3" />
                                 </span>
-                                {status}
+                                {idMessage(status)}
                             </div>
                         )}
 
