@@ -188,11 +188,11 @@ export default function AuthSlider({ status, canResetPassword }) {
                             <AuthInput
                                 id="login-username"
                                 name="username"
-                                label="Username"
+                                label="Username / Email"
                                 icon={<Icons.At />}
                                 value={loginForm.data.username}
                                 onChange={(e) => loginForm.setData('username', e.target.value)}
-                                placeholder="Masukkan username"
+                                placeholder="Masukkan username / email"
                                 autoComplete="username"
                                 error={loginForm.errors.username || loginForm.errors.email}
                                 required
