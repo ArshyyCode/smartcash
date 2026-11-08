@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Head, Link } from '@inertiajs/react';
+import usePublicTheme from '@/Hooks/usePublicTheme';
 
 /* ================================================================== */
 /*  KONFIGURASI                                                        */
@@ -22,28 +23,6 @@ const NAV_ITEMS = [
     { id: 'cara-kerja', label: 'Cara Kerja' },
     { id: 'tentang', label: 'Tentang Kami' },
 ];
-
-/* Mode tampilan. Nama dan kunci penyimpanan disamakan dengan tema aplikasi:
-   'samudra' = terang (biru), 'malam' = gelap. */
-const THEME_KEY = 'sc-theme';
-const THEME_LIGHT = 'samudra';
-const THEME_DARK = 'malam';
-
-const readSavedTheme = () => {
-    try {
-        return localStorage.getItem(THEME_KEY);
-    } catch (error) {
-        return null;
-    }
-};
-
-const saveTheme = (value) => {
-    try {
-        localStorage.setItem(THEME_KEY, value);
-    } catch (error) {
-        console.warn('Preferensi tema SmartCash tidak dapat disimpan di browser.', error);
-    }
-};
 
 const scrollToSection = (e, id) => {
     e.preventDefault();
@@ -1220,7 +1199,6 @@ function SupportModal({ tab, onTab, onClose }) {
 /* ================================================================== */
 export default function Welcome({ canLogin, canRegister, auth }) {
     const [active, setActive] = useState('beranda');
-    const [theme, setTheme] = useState(THEME_LIGHT);
     const [scrolled, setScrolled] = useState(false);
     const [support, setSupport] = useState(null); // null | 'help' | 'faq' | 'contact'
     const [menuOpen, setMenuOpen] = useState(false);
@@ -1228,51 +1206,12 @@ export default function Welcome({ canLogin, canRegister, auth }) {
     const progressRef = useRef(null);
     const rootRef = useRef(null);
 
-    const isDark = theme === THEME_DARK;
-
-    /* Muat mode: pilihan tersimpan, kalau belum ada ikuti pengaturan perangkat */
-    useEffect(() => {
-        const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
-        const saved = readSavedTheme();
-        if (saved) {
-            setTheme(saved === THEME_DARK ? THEME_DARK : THEME_LIGHT);
-        } else if (mq && mq.matches) {
-            setTheme(THEME_DARK);
-        }
-
-        // selama pengguna belum memilih sendiri, ikuti perubahan mode perangkat
-        const onSystemChange = (e) => {
-            if (!readSavedTheme()) setTheme(e.matches ? THEME_DARK : THEME_LIGHT);
-        };
-        if (mq && mq.addEventListener) mq.addEventListener('change', onSystemChange);
-        return () => {
-            if (mq && mq.removeEventListener) mq.removeEventListener('change', onSystemChange);
-        };
-    }, []);
+    const { theme, isDark, toggleTheme } = usePublicTheme();
 
     /* Sinkronkan atribut tema ke dokumen (dipakai bagian lain aplikasi) */
     useEffect(() => {
         document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.style.colorScheme = theme === THEME_DARK ? 'dark' : 'light';
     }, [theme]);
-
-    useEffect(() => {
-        return () => {
-            document.documentElement.style.colorScheme = '';
-        };
-    }, []);
-
-    const toggleTheme = () => {
-        const next = isDark ? THEME_LIGHT : THEME_DARK;
-        const root = rootRef.current;
-        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (root && !reduceMotion) {
-            root.classList.add('sc-switching');
-            window.setTimeout(() => root.classList.remove('sc-switching'), 450);
-        }
-        setTheme(next);
-        saveTheme(next);
-    };
 
     /* Semua efek terkait scroll dalam satu listener (dibatasi rAF) */
     useEffect(() => {
@@ -1402,7 +1341,7 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                             type="button"
                             role="switch"
                             aria-checked={isDark}
-                            onClick={toggleTheme}
+                            onClick={() => toggleTheme(rootRef.current)}
                             aria-label={isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
                             title={isDark ? 'Mode terang' : 'Mode gelap'}
                             className="sc-btn sc-btn-icon sc-theme-btn"

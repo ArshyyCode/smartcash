@@ -4,23 +4,29 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 /*  Tema halaman PUBLIK (landing, login, daftar, lupa password, dst.)  */
 /*  Letakkan di: resources/js/Hooks/usePublicTheme.js                  */
 /*                                                                     */
-/*  - Hanya dua pilihan: 'terang' dan 'gelap'.                         */
-/*  - Disimpan di kunci sendiri (sc-public-theme), TERPISAH dari tema   */
-/*    aplikasi di dalam akun (Pengaturan > Tampilan), sehingga          */
-/*    mengganti tema di dalam aplikasi tidak mengubah halaman publik.   */
+/*  - Hanya dua pilihan: 'samudra' (terang) dan 'malam' (gelap).        */
+/*  - Disimpan di sc-theme agar Welcome dan halaman autentikasi         */
+/*    menggunakan pilihan tema yang sama.                               */
 /*  - Tidak menyentuh atribut data-theme milik aplikasi.               */
 /* ================================================================== */
 
-export const PUBLIC_THEME_KEY = 'sc-public-theme';
-export const THEME_LIGHT = 'terang';
-export const THEME_DARK = 'gelap';
+export const PUBLIC_THEME_KEY = 'sc-theme';
+const LEGACY_PUBLIC_THEME_KEY = 'sc-public-theme';
+export const THEME_LIGHT = 'samudra';
+export const THEME_DARK = 'malam';
 
 const isValid = (value) => value === THEME_LIGHT || value === THEME_DARK;
 
 const readSaved = () => {
     try {
         const value = localStorage.getItem(PUBLIC_THEME_KEY);
-        return isValid(value) ? value : null;
+        if (isValid(value)) return value;
+        if (value) return THEME_LIGHT;
+
+        const legacyValue = localStorage.getItem(LEGACY_PUBLIC_THEME_KEY);
+        if (legacyValue === 'gelap') return THEME_DARK;
+        if (legacyValue === 'terang') return THEME_LIGHT;
+        return null;
     } catch (error) {
         return null;
     }
@@ -53,7 +59,9 @@ export default function usePublicTheme() {
         };
         // sinkron antar tab / antar halaman publik
         const onStorage = (e) => {
-            if (e.key === PUBLIC_THEME_KEY && isValid(e.newValue)) setTheme(e.newValue);
+            if (e.key !== PUBLIC_THEME_KEY) return;
+            if (isValid(e.newValue)) setTheme(e.newValue);
+            else if (e.newValue) setTheme(THEME_LIGHT);
         };
 
         if (mq && mq.addEventListener) mq.addEventListener('change', onSystemChange);

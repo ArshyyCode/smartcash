@@ -11,8 +11,8 @@ import { Icons } from '@/Components/AuthUI';
 /*    - logo-smartcash.png                                             */
 /*    - hero-kasir-2.png  (foto panel kiri)                             */
 /*                                                                     */
-/*  Tema hanya terang / gelap, memakai hook usePublicTheme sehingga    */
-/*  TIDAK ikut berubah saat tema aplikasi diganti di dalam akun.        */
+/*  Tema terang / gelap disinkronkan dengan halaman Welcome melalui    */
+/*  hook usePublicTheme.                                               */
 /*  Semua CSS halaman auth (token warna + kelas "sa-*") ada di sini.   */
 /* ================================================================== */
 
