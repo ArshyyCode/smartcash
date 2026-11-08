@@ -124,9 +124,17 @@ html[data-theme='malam'] :is(input, select, textarea):not([type='checkbox'], [ty
     background-color: rgb(var(--surface)) !important;
     color: rgb(var(--s-900)) !important;
 }
+html[data-theme='malam'] .sc-auth :is(input, select, textarea):not([type='checkbox'], [type='radio'], [type='range'], [type='file']) {
+    background-color: var(--sa-surface) !important;
+    color: var(--sa-heading) !important;
+}
 html[data-theme='malam'] input:-webkit-autofill {
     -webkit-text-fill-color: rgb(var(--s-900));
     -webkit-box-shadow: 0 0 0 1000px rgb(var(--surface)) inset;
+}
+html[data-theme='malam'] .sc-auth input:-webkit-autofill {
+    -webkit-text-fill-color: var(--sa-heading);
+    -webkit-box-shadow: 0 0 0 1000px var(--sa-surface) inset;
 }
 
 /* warna yang harus tetap gelap/terang walau tema gelap */

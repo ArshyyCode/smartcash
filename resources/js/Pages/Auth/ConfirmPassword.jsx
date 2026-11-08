@@ -1,10 +1,9 @@
-import InputError from '@/Components/InputError';
-import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
-import TextInput from '@/Components/TextInput';
+import React from 'react';
 import GuestLayout from '@/Layouts/GuestLayout';
+import { AuthHeader, AuthInput, SubmitButton, Icons } from '@/Components/AuthUI';
 import { Head, useForm } from '@inertiajs/react';
 
+/* Letakkan di: resources/js/Pages/Auth/ConfirmPassword.jsx */
 export default function ConfirmPassword() {
     const { data, setData, post, processing, errors, reset } = useForm({
         password: '',
@@ -12,7 +11,6 @@ export default function ConfirmPassword() {
 
     const submit = (e) => {
         e.preventDefault();
-
         post(route('password.confirm'), {
             onFinish: () => reset('password'),
         });
@@ -20,35 +18,31 @@ export default function ConfirmPassword() {
 
     return (
         <GuestLayout>
-            <Head title="Confirm Password" />
+            <Head title="Konfirmasi Kata Sandi" />
 
-            <div className="mb-4 text-sm text-gray-600">
-                This is a secure area of the application. Please confirm your
-                password before continuing.
-            </div>
+            <AuthHeader icon={<Icons.Lock className="h-6 w-6" />} title="Konfirmasi kata sandi">
+                Ini adalah area yang dilindungi. Masukkan kata sandi Anda sekali lagi sebelum melanjutkan.
+            </AuthHeader>
 
-            <form onSubmit={submit}>
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
+            <form onSubmit={submit} className="space-y-4">
+                <AuthInput
+                    id="confirm-password"
+                    name="password"
+                    label="Kata Sandi"
+                    icon={<Icons.Lock />}
+                    type="password"
+                    value={data.password}
+                    onChange={(e) => setData('password', e.target.value)}
+                    placeholder="Masukkan kata sandi"
+                    autoComplete="current-password"
+                    error={errors.password}
+                    autoFocus
+                    required
+                />
 
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        isFocused={true}
-                        onChange={(e) => setData('password', e.target.value)}
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4 flex items-center justify-end">
-                    <PrimaryButton className="ms-4" disabled={processing}>
-                        Confirm
-                    </PrimaryButton>
-                </div>
+                <SubmitButton processing={processing} loadingText="Memeriksa...">
+                    Konfirmasi
+                </SubmitButton>
             </form>
         </GuestLayout>
     );
