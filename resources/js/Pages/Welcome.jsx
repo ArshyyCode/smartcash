@@ -23,43 +23,395 @@ const NAV_ITEMS = [
     { id: 'tentang', label: 'Tentang Kami' },
 ];
 
+/* Mode tampilan. Nama dan kunci penyimpanan disamakan dengan tema aplikasi:
+   'samudra' = terang (biru), 'malam' = gelap. */
+const THEME_KEY = 'sc-theme';
+const THEME_LIGHT = 'samudra';
+const THEME_DARK = 'malam';
+
+const readSavedTheme = () => {
+    try {
+        return localStorage.getItem(THEME_KEY);
+    } catch (error) {
+        return null;
+    }
+};
+
+const saveTheme = (value) => {
+    try {
+        localStorage.setItem(THEME_KEY, value);
+    } catch (error) {
+        console.warn('Preferensi tema SmartCash tidak dapat disimpan di browser.', error);
+    }
+};
+
 const scrollToSection = (e, id) => {
     e.preventDefault();
     const el = document.getElementById(id);
     if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
         window.history.replaceState(null, '', `#${id}`);
     }
 };
 
 /* ================================================================== */
-/*  CSS ANIMASI                                                        */
+/*  CSS: TOKEN WARNA (TERANG + GELAP) DAN KOMPONEN                     */
+/*  Palet: Navy Blue (judul & footer), Sky Blue (aksen), Indigo        */
+/*  (tombol & sorotan di mode terang).                                 */
 /* ================================================================== */
 const css = `
-@keyframes sc-float { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-12px) } }
-@keyframes sc-drift { 0%,100% { transform: translate(0,0) scale(1) } 50% { transform: translate(22px,-18px) scale(1.08) } }
-@keyframes sc-bounce { 0%,100% { transform: translateY(0) } 50% { transform: translateY(6px) } }
-@keyframes sc-nudge { 0%,100% { transform: translateX(0) } 50% { transform: translateX(5px) } }
-@keyframes sc-ring { 0% { box-shadow: 0 0 0 0 rgba(37,99,235,.45) } 70%,100% { box-shadow: 0 0 0 16px rgba(37,99,235,0) } }
-@keyframes sc-twinkle { 0%,100% { opacity:.25; transform: scale(.8) } 50% { opacity:.9; transform: scale(1.15) } }
-
-.sc-float  { animation: sc-float 6s ease-in-out infinite }
-.sc-drift  { animation: sc-drift 14s ease-in-out infinite }
-.sc-bounce { animation: sc-bounce 1.6s ease-in-out infinite }
-.sc-nudge  { animation: sc-nudge 1.4s ease-in-out infinite }
-.sc-ring   { animation: sc-ring 2.2s ease-out infinite }
-.sc-twinkle{ animation: sc-twinkle 3s ease-in-out infinite }
-
-/* efek kilau pada tombol */
-.sc-shine { position: relative; overflow: hidden }
-.sc-shine::after {
-    content: ''; position: absolute; top: 0; left: -120%; width: 55%; height: 100%;
-    background: linear-gradient(120deg, transparent, rgba(255,255,255,.4), transparent);
-    transform: skewX(-20deg); transition: left .7s ease;
+/* ---------- token warna: mode terang ---------- */
+.sc-landing {
+    color-scheme: light;
+    --sc-bg: #F3F7FF;
+    --sc-bg-alt: #FFFFFF;
+    --sc-surface: #FFFFFF;
+    --sc-surface-2: #EAF1FF;
+    --sc-border: #D3DFF3;
+    --sc-border-strong: #A9BCE3;
+    --sc-heading: #0F1F4D;
+    --sc-text: #2B3A5E;
+    --sc-muted: #4F5E82;
+    --sc-hl: #3C4FD9;
+    --sc-accent: #0369A1;
+    --sc-accent-soft: #DCEEFD;
+    --sc-indigo: #4338CA;
+    --sc-indigo-soft: #E5E8FE;
+    --sc-navy: #1E2F6B;
+    --sc-navy-soft: #E3E8F4;
+    --sc-primary: #3C4FD9;
+    --sc-primary-hover: #2D3DB4;
+    --sc-on-primary: #FFFFFF;
+    --sc-nav: rgba(243, 247, 255, .88);
+    --sc-logo-bg: transparent;
+    --sc-stage: #E8F0FE;
+    --sc-ok: #047857;
+    --sc-ok-soft: #D7F5E8;
+    --sc-danger: #B91C1C;
+    --sc-danger-soft: #FDE4E4;
+    --sc-ring: rgba(60, 79, 217, .28);
+    --sc-shadow: 15, 31, 77;
+    --sc-overlay: rgba(8, 14, 38, .55);
+    --sc-footer: #0F1F4D;
+    --sc-f-logo: transparent;
+    --sc-f-brand-bg: #FFFFFF;
+    --sc-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%234F5E82' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.6' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
 }
-.sc-shine:hover::after { left: 140% }
 
-/* muncul saat di-scroll */
+/* ---------- token warna: mode gelap ---------- */
+.sc-landing[data-mode='dark'] {
+    color-scheme: dark;
+    --sc-bg: #0A1230;
+    --sc-bg-alt: #0D1839;
+    --sc-surface: #121E4B;
+    --sc-surface-2: #1A2866;
+    --sc-border: #2A3B78;
+    --sc-border-strong: #43569C;
+    --sc-heading: #F2F6FF;
+    --sc-text: #C9D4F0;
+    --sc-muted: #9FAED3;
+    --sc-hl: #7DD3FC;
+    --sc-accent: #7DD3FC;
+    --sc-accent-soft: rgba(56, 189, 248, .14);
+    --sc-indigo: #A5B4FC;
+    --sc-indigo-soft: rgba(129, 140, 248, .18);
+    --sc-navy: #C9D4F0;
+    --sc-navy-soft: rgba(148, 163, 214, .16);
+    --sc-primary: #38BDF8;
+    --sc-primary-hover: #7DD3FC;
+    --sc-on-primary: #06122E;
+    --sc-nav: rgba(10, 18, 48, .88);
+    --sc-logo-bg: #EAF1FF;
+    --sc-stage: #E3ECFC;
+    --sc-ok: #34D399;
+    --sc-ok-soft: rgba(52, 211, 153, .16);
+    --sc-danger: #FCA5A5;
+    --sc-danger-soft: rgba(248, 113, 113, .16);
+    --sc-ring: rgba(125, 211, 252, .35);
+    --sc-shadow: 0, 0, 0;
+    --sc-overlay: rgba(3, 6, 20, .74);
+    --sc-footer: #060C24;
+    --sc-f-logo: #EAF1FF;
+    --sc-f-brand-bg: transparent;
+    --sc-select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%239FAED3' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.6' d='m6 8 4 4 4-4'/%3E%3C/svg%3E");
+}
+
+/* ---------- dasar ---------- */
+.sc-landing {
+    font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--sc-bg);
+    color: var(--sc-text);
+    -webkit-font-smoothing: antialiased;
+}
+.sc-landing ::selection { background: var(--sc-primary); color: var(--sc-on-primary); }
+.sc-landing :is(a, button, [role='tab'], [role='switch'], summary) { cursor: pointer; }
+.sc-landing :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid var(--sc-hl);
+    outline-offset: 3px;
+}
+.sc-landing .sc-bg { background: var(--sc-bg); }
+.sc-landing .sc-bg-alt { background: var(--sc-bg-alt); }
+.sc-landing .sc-h { color: var(--sc-heading); }
+.sc-landing .sc-body { color: var(--sc-text); }
+.sc-landing .sc-muted { color: var(--sc-muted); }
+.sc-landing .sc-hl { color: var(--sc-hl); }
+.sc-landing .sc-accent { color: var(--sc-accent); }
+
+/* transisi halus saat berganti mode */
+.sc-landing.sc-switching,
+.sc-landing.sc-switching *,
+.sc-landing.sc-switching *::before,
+.sc-landing.sc-switching *::after {
+    transition: background-color .35s ease, color .35s ease, border-color .35s ease, fill .35s ease, stroke .35s ease, box-shadow .35s ease !important;
+}
+
+/* lompat ke konten (aksesibilitas keyboard) */
+.sc-landing .sc-skip {
+    position: absolute; left: .75rem; top: -4rem; z-index: 100;
+    padding: .7rem 1.1rem; border-radius: .75rem; font-size: .875rem; font-weight: 700;
+    background: var(--sc-primary); color: var(--sc-on-primary); transition: top .2s ease;
+}
+.sc-landing .sc-skip:focus { top: .75rem; }
+
+/* ---------- kartu ---------- */
+.sc-landing .sc-card { background: var(--sc-surface); border: 1px solid var(--sc-border); }
+.sc-landing .sc-card-lift {
+    transition: transform .3s cubic-bezier(.22, 1, .36, 1), box-shadow .3s ease, border-color .3s ease, background-color .3s ease;
+}
+.sc-landing .sc-card-lift:hover {
+    transform: translateY(-4px);
+    border-color: var(--sc-border-strong);
+    box-shadow: 0 18px 36px -16px rgba(var(--sc-shadow), .3);
+}
+.sc-landing .sc-shadow-md { box-shadow: 0 12px 28px -14px rgba(var(--sc-shadow), .35); }
+.sc-landing .sc-shadow-lg { box-shadow: 0 28px 56px -26px rgba(var(--sc-shadow), .4); }
+.sc-landing .sc-stage {
+    background: var(--sc-stage);
+    border: 1px solid var(--sc-border);
+    overflow: hidden;
+}
+.sc-landing[data-mode='dark'] .sc-stage img { filter: brightness(.96); }
+
+/* ---------- lencana, pil, titik status ---------- */
+.sc-landing .sc-badge {
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-size: .875rem; font-weight: 700; letter-spacing: .01em; color: var(--sc-accent);
+}
+.sc-landing .sc-pill {
+    display: inline-flex; align-items: center; border-radius: 9999px;
+    padding: .3rem .8rem; font-size: .75rem; font-weight: 700;
+    background: var(--sc-accent-soft); color: var(--sc-hl);
+}
+.sc-landing .sc-dot { display: inline-block; width: .5rem; height: .5rem; border-radius: 9999px; }
+.sc-landing .sc-dot-ok { background: var(--sc-ok); box-shadow: 0 0 0 4px var(--sc-ok-soft); }
+.sc-landing .sc-dot-sky { background: var(--sc-accent); box-shadow: 0 0 0 4px var(--sc-accent-soft); }
+
+/* ---------- ikon berwarna ---------- */
+.sc-landing .sc-tone {
+    transition: background-color .3s ease, color .3s ease, transform .3s ease;
+}
+.sc-landing .sc-tone-sky { background: var(--sc-accent-soft); color: var(--sc-accent); }
+.sc-landing .sc-tone-indigo { background: var(--sc-indigo-soft); color: var(--sc-indigo); }
+.sc-landing .sc-tone-navy { background: var(--sc-navy-soft); color: var(--sc-navy); }
+.sc-landing .sc-tone-ok { background: var(--sc-ok-soft); color: var(--sc-ok); }
+.sc-landing .group:hover .sc-tone { transform: scale(1.06); }
+
+/* ---------- tombol ---------- */
+.sc-landing .sc-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    min-height: 44px; padding: .65rem 1.5rem; border-radius: 9999px;
+    border: 1px solid transparent; font-size: .875rem; font-weight: 700; line-height: 1.2;
+    text-decoration: none; white-space: nowrap;
+    transition: background-color .2s ease, color .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.sc-landing .sc-btn:active { transform: scale(.97); }
+.sc-landing .sc-btn-block { width: 100%; }
+.sc-landing .sc-btn-lg { min-height: 48px; padding: .85rem 1.75rem; }
+.sc-landing .sc-btn-primary {
+    background: var(--sc-primary); color: var(--sc-on-primary);
+    box-shadow: 0 10px 20px -12px rgba(var(--sc-shadow), .6);
+}
+.sc-landing .sc-btn-primary:hover { background: var(--sc-primary-hover); transform: translateY(-2px); }
+.sc-landing .sc-btn-primary:active { transform: scale(.97); }
+.sc-landing .sc-btn-outline { background: transparent; color: var(--sc-heading); border-color: var(--sc-border-strong); }
+.sc-landing .sc-btn-outline:hover { border-color: var(--sc-hl); color: var(--sc-hl); background: var(--sc-accent-soft); transform: translateY(-2px); }
+.sc-landing .sc-btn-outline:active { transform: scale(.97); }
+.sc-landing .sc-btn-soft { background: var(--sc-accent-soft); color: var(--sc-hl); }
+.sc-landing .sc-btn-soft:hover { background: var(--sc-primary); color: var(--sc-on-primary); }
+.sc-landing .sc-btn-icon {
+    width: 44px; height: 44px; padding: 0;
+    background: var(--sc-surface); color: var(--sc-heading); border-color: var(--sc-border);
+}
+.sc-landing .sc-btn-icon:hover { border-color: var(--sc-hl); color: var(--sc-hl); transform: translateY(-2px); }
+.sc-landing .sc-btn-round { width: 48px; height: 48px; padding: 0; }
+.sc-landing .sc-iconbtn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; flex-shrink: 0; border-radius: .75rem; color: var(--sc-muted);
+    transition: background-color .2s ease, color .2s ease, transform .2s ease;
+}
+.sc-landing .sc-iconbtn:hover { background: var(--sc-surface-2); color: var(--sc-heading); }
+.sc-landing .sc-iconbtn:active { transform: scale(.92); }
+.sc-landing .sc-iconbtn-sm {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 9999px;
+    background: var(--sc-surface-2); color: var(--sc-muted);
+    transition: background-color .2s ease, color .2s ease, transform .2s ease;
+}
+.sc-landing .sc-iconbtn-sm:hover { background: var(--sc-danger-soft); color: var(--sc-danger); }
+.sc-landing .sc-iconbtn-sm:active { transform: scale(.9); }
+.sc-landing .sc-top {
+    transition: opacity .3s ease, transform .3s ease, background-color .2s ease, visibility .3s ease;
+}
+/* tampil/sembunyi per ukuran layar (tidak tertimpa display milik tombol) */
+.sc-landing .sc-sm-up { display: none; }
+.sc-landing .sc-below-lg { display: inline-flex; }
+@media (min-width: 640px) { .sc-landing .sc-sm-up { display: inline-flex; } }
+@media (min-width: 1024px) { .sc-landing .sc-below-lg { display: none; } }
+.sc-landing .sc-top.is-hidden { opacity: 0; transform: translateY(12px) scale(.8); pointer-events: none; visibility: hidden; }
+
+/* ---------- toggle mode gelap/terang ---------- */
+.sc-landing .sc-theme-btn { position: relative; overflow: hidden; }
+.sc-landing .sc-theme-icon {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    transition: transform .45s cubic-bezier(.22, 1, .36, 1), opacity .3s ease;
+}
+.sc-landing .sc-theme-icon.is-off { opacity: 0; transform: rotate(-90deg) scale(.4); }
+
+/* ---------- navbar ---------- */
+.sc-landing .sc-header {
+    background: var(--sc-nav);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border-bottom: 1px solid transparent;
+    transition: border-color .3s ease, box-shadow .3s ease, background-color .3s ease;
+}
+.sc-landing .sc-header.is-scrolled {
+    border-bottom-color: var(--sc-border);
+    box-shadow: 0 10px 28px -20px rgba(var(--sc-shadow), .45);
+}
+.sc-landing .sc-logo-tile {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 4px; border-radius: 12px; background: var(--sc-logo-bg);
+}
+.sc-landing .sc-nav-link {
+    position: relative; display: inline-flex; align-items: center; min-height: 44px;
+    font-size: .875rem; font-weight: 500; color: var(--sc-text); transition: color .2s ease;
+}
+.sc-landing .sc-nav-link:hover { color: var(--sc-hl); }
+.sc-landing .sc-nav-link[aria-current='true'] { color: var(--sc-hl); font-weight: 700; }
+.sc-landing .sc-nav-bar {
+    position: absolute; left: 0; right: 0; bottom: 4px; height: 2px; border-radius: 2px;
+    background: var(--sc-hl); transform: scaleX(0); transform-origin: left; transition: transform .3s ease;
+}
+.sc-landing .sc-nav-link[aria-current='true'] .sc-nav-bar { transform: scaleX(1); }
+.sc-landing .sc-link {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 .5rem;
+    font-size: .875rem; font-weight: 600; color: var(--sc-heading); transition: color .2s ease;
+}
+.sc-landing .sc-link:hover { color: var(--sc-hl); }
+.sc-landing .sc-menu { background: var(--sc-bg-alt); border-top: 1px solid var(--sc-border); }
+.sc-landing .sc-menu-link {
+    display: flex; align-items: center; min-height: 48px; font-size: .9375rem; font-weight: 500;
+    color: var(--sc-text); transition: color .2s ease;
+}
+.sc-landing .sc-menu-link:hover,
+.sc-landing .sc-menu-link[aria-current='true'] { color: var(--sc-hl); }
+.sc-landing .sc-progress { background: var(--sc-primary); }
+
+/* ---------- form ---------- */
+.sc-landing .sc-input {
+    width: 100%; min-height: 44px; padding: .7rem .95rem; border-radius: .75rem;
+    background-color: var(--sc-surface); color: var(--sc-heading);
+    border: 1px solid var(--sc-border-strong); font-size: .875rem;
+    transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+.sc-landing .sc-input::placeholder { color: var(--sc-muted); opacity: 1; }
+.sc-landing .sc-input:hover { border-color: var(--sc-hl); }
+.sc-landing .sc-input:focus { outline: none; border-color: var(--sc-hl); box-shadow: 0 0 0 4px var(--sc-ring); }
+.sc-landing .sc-input.is-invalid { border-color: var(--sc-danger); }
+.sc-landing .sc-input.is-invalid:focus { box-shadow: 0 0 0 4px var(--sc-danger-soft); }
+.sc-landing .sc-input-search { padding-left: 2.8rem; padding-right: 2.75rem; }
+.sc-landing select.sc-input {
+    -webkit-appearance: none; appearance: none;
+    background-image: var(--sc-select-arrow); background-repeat: no-repeat;
+    background-position: right .8rem center; background-size: 1.2rem 1.2rem; padding-right: 2.6rem;
+}
+.sc-landing select.sc-input option { background: var(--sc-surface); color: var(--sc-heading); }
+.sc-landing .sc-error { color: var(--sc-danger); font-size: .75rem; font-weight: 600; margin-top: .3rem; }
+
+/* ---------- modal bantuan ---------- */
+.sc-landing .sc-overlay { background: var(--sc-overlay); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.sc-landing .sc-modal {
+    background: var(--sc-surface); border: 1px solid var(--sc-border);
+    box-shadow: 0 40px 90px -30px rgba(0, 0, 0, .55);
+}
+.sc-landing .sc-modal:focus { outline: none; }
+.sc-landing .sc-modal-head { border-bottom: 1px solid var(--sc-border); }
+.sc-landing .sc-tab {
+    display: inline-flex; align-items: center; gap: .5rem; flex-shrink: 0;
+    min-height: 44px; padding: 0 1rem; margin-bottom: -1px;
+    font-size: .875rem; font-weight: 700; color: var(--sc-muted);
+    border-bottom: 2px solid transparent;
+    transition: color .2s ease, border-color .2s ease;
+}
+.sc-landing .sc-tab:hover { color: var(--sc-heading); border-bottom-color: var(--sc-border-strong); }
+.sc-landing .sc-tab[aria-selected='true'] { color: var(--sc-hl); border-bottom-color: var(--sc-hl); }
+.sc-landing .sc-num {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 1.35rem; height: 1.35rem; border-radius: 9999px; margin-top: 1px;
+    background: var(--sc-surface-2); color: var(--sc-muted); font-size: .6875rem; font-weight: 700;
+}
+.sc-landing .sc-faq {
+    background: var(--sc-surface); border: 1px solid var(--sc-border); border-radius: 1rem;
+    transition: border-color .2s ease, background-color .2s ease;
+}
+.sc-landing .sc-faq:hover { border-color: var(--sc-border-strong); }
+.sc-landing .sc-faq.is-open { border-color: var(--sc-hl); background: var(--sc-accent-soft); }
+.sc-landing .sc-chev {
+    display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    width: 1.9rem; height: 1.9rem; border-radius: 9999px;
+    background: var(--sc-surface-2); color: var(--sc-muted);
+    transition: background-color .3s ease, color .3s ease, transform .3s ease;
+}
+.sc-landing .sc-faq.is-open .sc-chev { background: var(--sc-primary); color: var(--sc-on-primary); transform: rotate(180deg); }
+
+/* ---------- footer (latar navy gelap di kedua mode) ---------- */
+.sc-landing .sc-footer { background: var(--sc-footer); color: #C3CFEA; }
+.sc-landing .sc-footer .sc-f-h { color: #FFFFFF; }
+.sc-landing .sc-footer .sc-f-sky { color: #7DD3FC; }
+.sc-landing .sc-footer .sc-f-muted { color: #AEBBDD; }
+.sc-landing .sc-footer .sc-f-link {
+    display: inline-flex; align-items: center; min-height: 40px; text-align: left; color: #C3CFEA;
+    transition: color .2s ease, transform .3s ease;
+}
+.sc-landing .sc-footer .sc-f-link:hover { color: #FFFFFF; transform: translateX(6px); }
+.sc-landing .sc-footer .sc-f-line { border-top: 1px solid rgba(255, 255, 255, .12); }
+.sc-landing .sc-footer :is(a, button):focus-visible { outline-color: #7DD3FC; }
+/* blok logo + tulisan SmartCash: warna tulisan mengikuti mode.
+   Mode terang: kartu putih berisi tulisan navy/indigo. Mode gelap: tanpa kartu, tulisan terang. */
+.sc-landing .sc-f-brand {
+    padding: .5rem 1rem .5rem .5rem; border-radius: 1rem; background: var(--sc-f-brand-bg);
+    transition: background-color .3s ease, padding .3s ease;
+}
+.sc-landing[data-mode='dark'] .sc-f-brand { padding: 0; }
+.sc-landing .sc-f-logo { background: var(--sc-f-logo); }
+.sc-landing .sc-social {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px; border-radius: .75rem;
+    background: rgba(255, 255, 255, .1); color: #FFFFFF;
+    transition: background-color .25s ease, transform .25s ease;
+}
+.sc-landing .sc-social:hover { background: #4F46E5; transform: translateY(-3px); }
+.sc-landing .sc-footer-btn {
+    display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; padding: 0 1.1rem;
+    border-radius: .75rem; background: rgba(255, 255, 255, .1); color: #FFFFFF;
+    font-size: .8125rem; font-weight: 700;
+    transition: background-color .25s ease, color .25s ease, transform .2s ease;
+}
+.sc-landing .sc-footer-btn:hover { background: #38BDF8; color: #06122E; }
+.sc-landing .sc-footer-btn:active { transform: scale(.96); }
+
+/* ---------- animasi ---------- */
 .sc-reveal { opacity: 0; transition: opacity .9s cubic-bezier(.22,1,.36,1), transform .9s cubic-bezier(.22,1,.36,1) }
 .sc-up    { transform: translateY(36px) }
 .sc-left  { transform: translateX(-52px) }
@@ -74,7 +426,13 @@ const css = `
 
 @media (prefers-reduced-motion: reduce) {
     .sc-reveal { opacity: 1 !important; transform: none !important; transition: none !important }
-    .sc-float,.sc-drift,.sc-bounce,.sc-nudge,.sc-ring,.sc-twinkle,.sc-pop,.sc-fade { animation: none !important }
+    .sc-pop, .sc-fade { animation: none !important }
+    .sc-landing .sc-card-lift:hover,
+    .sc-landing .sc-btn:hover,
+    .sc-landing .sc-btn:active,
+    .sc-landing .sc-footer .sc-f-link:hover,
+    .sc-landing .sc-social:hover { transform: none !important }
+    .sc-landing .sc-theme-icon { transition: none }
 }
 `;
 
@@ -90,6 +448,10 @@ const Reveal = ({ children, variant = 'up', delay = 0, className = '' }) => {
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
+        if (typeof IntersectionObserver === 'undefined') {
+            setShown(true);
+            return;
+        }
         const io = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
@@ -114,103 +476,31 @@ const Reveal = ({ children, variant = 'up', delay = 0, className = '' }) => {
     );
 };
 
-/* Gambar miring 3D mengikuti kursor */
-const Tilt = ({ children, max = 7, className = '' }) => {
-    const ref = useRef(null);
-    const move = (e) => {
-        const el = ref.current;
-        if (!el) return;
-        const r = el.getBoundingClientRect();
-        const x = (e.clientX - r.left) / r.width - 0.5;
-        const y = (e.clientY - r.top) / r.height - 0.5;
-        el.style.transform = `perspective(900px) rotateY(${x * max}deg) rotateX(${-y * max}deg) scale3d(1.02,1.02,1.02)`;
-    };
-    const leave = () => {
-        if (ref.current) ref.current.style.transform = 'perspective(900px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)';
-    };
-    return (
-        <div
-            ref={ref}
-            onMouseMove={move}
-            onMouseLeave={leave}
-            className={`transition-transform duration-200 ease-out will-change-transform ${className}`}
-        >
-            {children}
-        </div>
-    );
-};
-
-/* Angka naik dari 0 saat terlihat */
-const CountUp = ({ to, suffix = '', duration = 1800 }) => {
-    const ref = useRef(null);
-    const [n, setN] = useState(0);
-
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const io = new IntersectionObserver(
-            ([entry]) => {
-                if (!entry.isIntersecting) return;
-                io.disconnect();
-                if (reduce) {
-                    setN(to);
-                    return;
-                }
-                const t0 = performance.now();
-                const tick = (t) => {
-                    const p = Math.min((t - t0) / duration, 1);
-                    setN(Math.round(to * (1 - Math.pow(1 - p, 3))));
-                    if (p < 1) requestAnimationFrame(tick);
-                };
-                requestAnimationFrame(tick);
-            },
-            { threshold: 0.6 }
-        );
-        io.observe(el);
-        return () => io.disconnect();
-    }, [to, duration]);
-
-    return (
-        <span ref={ref}>
-            {n.toLocaleString('id-ID')}
-            {suffix}
-        </span>
-    );
-};
-
 /* ================================================================== */
 /*  IKON (SVG inline)                                                  */
 /* ================================================================== */
 const iconProps = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
 
 const IconBolt = ({ className = 'w-6 h-6' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
         <path d="M13.5 2 4 13.5h6.2L9 22l10-12.2h-6.4L13.5 2Z" />
     </svg>
 );
 const IconBox = ({ className = 'w-6 h-6' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
         <path d="M21 8 12 3 3 8v8l9 5 9-5V8Z" />
         <path d="m3 8 9 5 9-5M12 13v8" />
     </svg>
 );
 const IconChart = ({ className = 'w-6 h-6' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
         <rect x="3" y="12" width="4.5" height="9" rx="1.2" />
         <rect x="9.75" y="7" width="4.5" height="14" rx="1.2" />
         <rect x="16.5" y="3" width="4.5" height="18" rx="1.2" />
     </svg>
 );
-const IconWallet = ({ className = 'w-6 h-6' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
-        <rect x="3" y="5" width="18" height="14" rx="3" />
-        <path d="M3 10h18" />
-        <circle cx="16.5" cy="14.5" r="1.3" fill="currentColor" />
-    </svg>
-);
 const IconStore = ({ className = 'w-6 h-6' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
         <path d="M4 9.5 5.5 4h13L20 9.5" />
         <path d="M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0" />
         <path d="M5 12.5V20h14v-7.5" />
@@ -218,13 +508,13 @@ const IconStore = ({ className = 'w-6 h-6' }) => (
     </svg>
 );
 const IconUser = ({ className = 'w-6 h-6' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
         <circle cx="12" cy="8" r="4.2" />
         <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7H4Z" />
     </svg>
 );
 const IconTag = ({ className = 'w-6 h-6' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
         <path
             fillRule="evenodd"
             d="M3 12.2V4.5A1.5 1.5 0 0 1 4.5 3h7.7a1.5 1.5 0 0 1 1.1.4l7.3 7.3a1.5 1.5 0 0 1 0 2.1l-7.7 7.7a1.5 1.5 0 0 1-2.1 0l-7.3-7.3a1.5 1.5 0 0 1-.5-1Zm4.5-6.2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z"
@@ -232,55 +522,89 @@ const IconTag = ({ className = 'w-6 h-6' }) => (
     </svg>
 );
 const IconArrow = ({ className = 'w-4 h-4' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
         <path d="M5 12h14M13 6l6 6-6 6" />
     </svg>
 );
 const IconChevronDown = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps} strokeWidth={2.5}>
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} strokeWidth={2.5} aria-hidden="true">
         <path d="m6 9 6 6 6-6" />
     </svg>
 );
 const IconChevronUp = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps} strokeWidth={2.5}>
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} strokeWidth={2.5} aria-hidden="true">
         <path d="m6 15 6-6 6 6" />
     </svg>
 );
-const IconSpark = ({ className = 'w-3.5 h-3.5' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
-        <path d="M12 2 14 9l7 3-7 3-2 7-2-7-7-3 7-3 2-7Z" />
-    </svg>
-);
 const IconMail = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
         <rect x="3" y="5" width="18" height="14" rx="3" />
         <path d="m4 7 8 6 8-6" />
     </svg>
 );
 const IconPhone = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
         <path d="M6.6 2.5 9.5 3l1.3 4-2 1.5a12 12 0 0 0 6.7 6.7l1.5-2 4 1.3.5 2.9a2 2 0 0 1-2 2.3A17.5 17.5 0 0 1 4.3 4.5a2 2 0 0 1 2.3-2Z" />
     </svg>
 );
 const IconBag = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
         <path d="M7 8V7a5 5 0 0 1 10 0v1h2.2a1 1 0 0 1 1 1.1l-1 11a1 1 0 0 1-1 .9H5.8a1 1 0 0 1-1-.9l-1-11a1 1 0 0 1 1-1.1H7Zm2 0h6V7a3 3 0 0 0-6 0v1Z" />
     </svg>
 );
 const IconHeart = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
         <path d="M12 21s-8-5-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 6-8 11-8 11Z" />
     </svg>
 );
 const IconHeadset = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
         <path d="M12 3a8 8 0 0 0-8 8v5a3 3 0 0 0 3 3h1v-7H6v-1a6 6 0 0 1 12 0v1h-2v7h2v.5A2.5 2.5 0 0 1 15.5 21H13v-1.5h2.5a1 1 0 0 0 1-1V19h1a3 3 0 0 0 3-3v-5a8 8 0 0 0-8-8Z" />
     </svg>
 );
-const IconCycle = ({ className = 'w-3.5 h-3.5' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
-        <path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3" />
-        <path d="M18 3v4h-4M6 21v-4h4" />
+const IconSun = ({ className = 'w-5 h-5' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+    </svg>
+);
+const IconMoon = ({ className = 'w-5 h-5' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
+        <path d="M20.5 15.5A8.5 8.5 0 0 1 8.5 3.5 8.5 8.5 0 1 0 20.5 15.5Z" />
+    </svg>
+);
+const IconBook = ({ className = 'w-5 h-5' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
+        <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15H5.5A1.5 1.5 0 0 0 4 20.5v-15Z" />
+        <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15h5.5a1.5 1.5 0 0 1 1.5 1.5v-15Z" />
+    </svg>
+);
+const IconHelp = ({ className = 'w-5 h-5' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.100 1-1.100 1.800M12 16.500v.1" />
+    </svg>
+);
+const IconXMark = ({ className = 'w-5 h-5' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} strokeWidth={2.5} aria-hidden="true">
+        <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+);
+const IconSearch = ({ className = 'w-4 h-4' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+    </svg>
+);
+const IconSend = ({ className = 'w-4 h-4' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
+        <path d="M21 3 10 14M21 3l-6.500 18-3.500-7-7-3.500L21 3Z" />
+    </svg>
+);
+const IconClock = ({ className = 'w-5 h-5' }) => (
+    <svg viewBox="0 0 24 24" className={className} {...iconProps} aria-hidden="true">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
     </svg>
 );
 
@@ -295,23 +619,16 @@ const Logo = ({ size = 'w-10 h-10' }) => (
     />
 );
 
-const Badge = ({ icon, children }) => (
-    <div className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1.5 rounded-full text-xs font-semibold">
-        {icon}
-        {children}
-    </div>
+const Badge = ({ children }) => (
+    <div className="sc-badge">{children}</div>
 );
 
-const FeatureItem = ({ icon, title, desc, tint }) => (
-    <div className="group h-full rounded-2xl p-5 flex flex-col gap-3 cursor-default transition duration-300 hover:bg-white hover:-translate-y-1.5 hover:shadow-xl hover:shadow-blue-900/10">
-        <div
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center transition duration-300 group-hover:bg-blue-600 group-hover:text-white group-hover:scale-110 group-hover:rotate-6 ${tint}`}
-        >
-            {icon}
-        </div>
+const FeatureItem = ({ icon, title, desc, tone }) => (
+    <div className="group sc-card sc-card-lift h-full rounded-3xl p-6 flex flex-col gap-4 cursor-default">
+        <div className={`sc-tone sc-tone-${tone} w-14 h-14 rounded-2xl flex items-center justify-center`}>{icon}</div>
         <div>
-            <h4 className="font-bold text-sm text-slate-900 transition-colors group-hover:text-blue-700">{title}</h4>
-            <p className="text-xs text-slate-500 leading-relaxed mt-1">{desc}</p>
+            <h4 className="sc-h font-bold text-base">{title}</h4>
+            <p className="sc-muted text-sm leading-relaxed mt-2">{desc}</p>
         </div>
     </div>
 );
@@ -322,7 +639,7 @@ const ScrollHint = ({ to }) => (
             href={`#${to}`}
             onClick={(e) => scrollToSection(e, to)}
             aria-label="Gulir ke bagian berikutnya"
-            className="sc-bounce w-10 h-10 rounded-full bg-white shadow-md shadow-blue-900/10 text-blue-700 flex items-center justify-center hover:bg-blue-600 hover:text-white transition-colors"
+            className="sc-btn sc-btn-icon"
         >
             <IconChevronDown />
         </a>
@@ -360,31 +677,22 @@ const SocialIcons = {
     ),
 };
 
-const SocialLink = ({ label, hover, children }) => (
-    <a
-        href="#"
-        onClick={(e) => e.preventDefault()}
-        aria-label={label}
-        title={label}
-        className={`w-9 h-9 rounded-xl bg-white/10 text-white flex items-center justify-center hover:-translate-y-1 hover:shadow-lg transition duration-300 ${hover}`}
-    >
+const SocialLink = ({ label, children }) => (
+    <a href="#" onClick={(e) => e.preventDefault()} aria-label={label} title={label} className="sc-social">
         {children}
     </a>
 );
 
-/* Gambar ilustrasi: dilebur dengan latar & tepi dihaluskan */
-const Illustration = ({ src, alt, fade = '70%', className = '' }) => {
-    const mask = `radial-gradient(ellipse 68% 66% at 50% 50%, #000 ${fade}, transparent 100%)`;
-    return (
-        <img
-            src={src}
-            alt={alt}
-            draggable={false}
-            className={`w-full h-auto select-none ${className}`}
-            style={{ mixBlendMode: 'multiply', WebkitMaskImage: mask, maskImage: mask }}
-        />
-    );
-};
+const Illustration = ({ src, alt, className = '', eager = false }) => (
+    <img
+        src={src}
+        alt={alt}
+        draggable={false}
+        decoding="async"
+        loading={eager ? 'eager' : 'lazy'}
+        className={`w-full h-auto select-none ${className}`}
+    />
+);
 
 /* ================================================================== */
 /*  PUSAT BANTUAN, FAQ, DAN HUBUNGI KAMI                               */
@@ -524,44 +832,9 @@ const FAQ_ITEMS = [
 
 const SUPPORT_TOPICS = ['Pertanyaan umum', 'Kendala teknis', 'Akun dan kata sandi', 'Saran fitur', 'Lainnya'];
 
-const IconBook = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
-        <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15H5.5A1.5 1.5 0 0 0 4 20.5v-15Z" />
-        <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15h5.5a1.5 1.5 0 0 1 1.5 1.5v-15Z" />
-    </svg>
-);
-const IconHelp = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.100 1-1.100 1.800M12 16.500v.1" />
-    </svg>
-);
-const IconXMark = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps} strokeWidth={2.5}>
-        <path d="M6 6l12 12M18 6 6 18" />
-    </svg>
-);
-const IconSearch = ({ className = 'w-4 h-4' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-3.5-3.5" />
-    </svg>
-);
-const IconSend = ({ className = 'w-4 h-4' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
-        <path d="M21 3 10 14M21 3l-6.500 18-3.500-7-7-3.500L21 3Z" />
-    </svg>
-);
-const IconClock = ({ className = 'w-5 h-5' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...iconProps}>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-    </svg>
-);
-
 const SearchBox = ({ value, onChange, placeholder }) => (
     <div className="relative">
-        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+        <span className="sc-muted pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
             <IconSearch className="w-[18px] h-[18px]" />
         </span>
         <input
@@ -569,14 +842,15 @@ const SearchBox = ({ value, onChange, placeholder }) => (
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
-            className="w-full pl-11 pr-10 py-3 text-sm rounded-xl border-slate-200 bg-slate-50 placeholder:text-slate-400 transition duration-200 hover:border-blue-300 focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+            aria-label={placeholder}
+            className="sc-input sc-input-search"
         />
         {value && (
             <button
                 type="button"
                 onClick={() => onChange('')}
                 aria-label="Hapus pencarian"
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-200 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition active:scale-90"
+                className="sc-iconbtn-sm absolute right-2 top-1/2 -translate-y-1/2"
             >
                 <IconXMark className="w-3 h-3" />
             </button>
@@ -586,16 +860,12 @@ const SearchBox = ({ value, onChange, placeholder }) => (
 
 const EmptyResult = ({ onContact }) => (
     <div className="text-center py-10">
-        <span className="text-slate-300 inline-block">
+        <span className="sc-muted inline-block">
             <IconHelp className="w-10 h-10" />
         </span>
-        <p className="text-sm font-semibold text-slate-600 mt-2">Tidak ada hasil yang cocok</p>
-        <p className="text-xs text-slate-400 mt-1">Coba kata kunci lain, atau hubungi tim kami langsung.</p>
-        <button
-            type="button"
-            onClick={onContact}
-            className="mt-4 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full transition active:scale-95"
-        >
+        <p className="sc-h text-sm font-semibold mt-2">Tidak ada hasil yang cocok</p>
+        <p className="sc-muted text-xs mt-1">Coba kata kunci lain, atau hubungi tim kami langsung.</p>
+        <button type="button" onClick={onContact} className="sc-btn sc-btn-soft mt-4">
             Hubungi Kami
         </button>
     </div>
@@ -616,22 +886,17 @@ function HelpTab({ onContact }) {
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {topics.map((t) => (
-                        <div
-                            key={t.id}
-                            className="rounded-2xl border border-slate-200 bg-white p-5 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/70"
-                        >
-                            <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2.5">
-                                <span className="w-8 h-8 shrink-0 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <div key={t.id} className="group sc-card sc-card-lift rounded-2xl p-5">
+                            <h4 className="sc-h text-sm font-bold flex items-center gap-2.5">
+                                <span className="sc-tone sc-tone-sky w-9 h-9 shrink-0 rounded-lg flex items-center justify-center">
                                     <IconBook className="w-4 h-4" />
                                 </span>
                                 {t.title}
                             </h4>
                             <ol className="mt-3 space-y-2">
                                 {t.steps.map((s, i) => (
-                                    <li key={i} className="flex gap-2.5 text-xs text-slate-600 leading-relaxed">
-                                        <span className="w-5 h-5 shrink-0 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold flex items-center justify-center mt-px">
-                                            {i + 1}
-                                        </span>
+                                    <li key={i} className="sc-body flex gap-2.5 text-xs leading-relaxed">
+                                        <span className="sc-num">{i + 1}</span>
                                         <span>{s}</span>
                                     </li>
                                 ))}
@@ -662,24 +927,24 @@ function FaqTab({ onContact }) {
                     {items.map((f) => {
                         const isOpen = open === f.i || Boolean(query);
                         return (
-                            <div
-                                key={f.i}
-                                className={`rounded-2xl border transition duration-200 ${isOpen ? 'border-blue-300 bg-blue-50/40' : 'border-slate-200 bg-white hover:border-blue-200'}`}
-                            >
+                            <div key={f.i} className={`sc-faq ${isOpen ? 'is-open' : ''}`}>
                                 <button
                                     type="button"
                                     onClick={() => setOpen(open === f.i ? -1 : f.i)}
                                     aria-expanded={isOpen}
-                                    className="w-full flex items-center justify-between gap-4 text-left px-5 py-4"
+                                    className="w-full flex items-center justify-between gap-4 text-left px-5 py-4 min-h-[52px] rounded-2xl"
                                 >
-                                    <span className="text-sm font-bold text-slate-900">{f.q}</span>
-                                    <span className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center transition duration-300 ${isOpen ? 'bg-blue-600 text-white rotate-180' : 'bg-slate-100 text-slate-500'}`}>
+                                    <span className="sc-h text-sm font-bold">{f.q}</span>
+                                    <span className="sc-chev">
                                         <IconChevronDown className="w-4 h-4" />
                                     </span>
                                 </button>
-                                <div className={`grid transition-all duration-300 ease-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}>
+                                <div
+                                    aria-hidden={!isOpen}
+                                    className={`grid transition-all duration-300 ease-out ${isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}`}
+                                >
                                     <div className="overflow-hidden">
-                                        <p className="px-5 pb-4 text-sm text-slate-600 leading-relaxed">{f.a}</p>
+                                        <p className="sc-body px-5 pb-4 text-sm leading-relaxed">{f.a}</p>
                                     </div>
                                 </div>
                             </div>
@@ -721,10 +986,7 @@ function ContactTab() {
         setSent(true);
     };
 
-    const fieldCls = (err) =>
-        `w-full text-sm rounded-xl bg-white py-2.5 px-3.5 placeholder:text-slate-400 transition duration-200 focus:ring-4 ${
-            err ? 'border-red-300 focus:border-red-500 focus:ring-red-100' : 'border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-blue-100'
-        }`;
+    const fieldCls = (err) => `sc-input${err ? ' is-invalid' : ''}`;
 
     const channels = [
         { icon: <IconMail />, label: 'Email', value: CONTACT.email, href: `mailto:${CONTACT.email}` },
@@ -739,30 +1001,26 @@ function ContactTab() {
                 {channels.map((c) => {
                     const inner = (
                         <>
-                            <span className="w-10 h-10 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center transition duration-200 group-hover:bg-blue-600 group-hover:text-white">
+                            <span className="sc-tone sc-tone-sky w-10 h-10 shrink-0 rounded-xl flex items-center justify-center">
                                 {c.icon}
                             </span>
                             <span className="min-w-0">
-                                <span className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide">{c.label}</span>
-                                <span className="block text-sm font-bold text-slate-800 break-words">{c.value}</span>
+                                <span className="sc-muted block text-xs font-semibold">{c.label}</span>
+                                <span className="sc-h block text-sm font-bold break-words">{c.value}</span>
                             </span>
                         </>
                     );
                     return c.href ? (
-                        <a
-                            key={c.label}
-                            href={c.href}
-                            className="group flex items-center gap-3 rounded-2xl border border-slate-200 p-4 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5"
-                        >
+                        <a key={c.label} href={c.href} className="group sc-card sc-card-lift flex items-center gap-3 rounded-2xl p-4">
                             {inner}
                         </a>
                     ) : (
-                        <div key={c.label} className="group flex items-center gap-3 rounded-2xl border border-slate-200 p-4">
+                        <div key={c.label} className="sc-card flex items-center gap-3 rounded-2xl p-4">
                             {inner}
                         </div>
                     );
                 })}
-                <p className="text-xs text-slate-400 leading-relaxed px-1">
+                <p className="sc-muted text-xs leading-relaxed px-1">
                     Untuk pertanyaan umum, cek dulu Pusat Bantuan dan FAQ. Jawabannya sering sudah ada di sana.
                 </p>
             </div>
@@ -771,34 +1029,45 @@ function ContactTab() {
             <form onSubmit={submit} noValidate className="md:col-span-3 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Nama</label>
+                        <label htmlFor="sc-contact-name" className="sc-h block text-xs font-semibold mb-1.5">Nama</label>
                         <input
+                            id="sc-contact-name"
                             type="text"
                             value={form.name}
                             onChange={(e) => set('name', e.target.value)}
                             onBlur={() => touch('name')}
                             placeholder="Nama Anda"
+                            autoComplete="name"
+                            aria-invalid={Boolean(touched.name && errors.name)}
                             className={fieldCls(touched.name && errors.name)}
                         />
-                        {touched.name && errors.name && <p className="text-red-500 text-[11px] font-semibold mt-1">{errors.name}</p>}
+                        {touched.name && errors.name && <p className="sc-error">{errors.name}</p>}
                     </div>
                     <div>
-                        <label className="block text-xs font-semibold text-slate-700 mb-1.5">Email</label>
+                        <label htmlFor="sc-contact-email" className="sc-h block text-xs font-semibold mb-1.5">Email</label>
                         <input
+                            id="sc-contact-email"
                             type="email"
                             value={form.email}
                             onChange={(e) => set('email', e.target.value)}
                             onBlur={() => touch('email')}
                             placeholder="email@domain.com"
+                            autoComplete="email"
+                            aria-invalid={Boolean(touched.email && errors.email)}
                             className={fieldCls(touched.email && errors.email)}
                         />
-                        {touched.email && errors.email && <p className="text-red-500 text-[11px] font-semibold mt-1">{errors.email}</p>}
+                        {touched.email && errors.email && <p className="sc-error">{errors.email}</p>}
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Topik</label>
-                    <select value={form.topic} onChange={(e) => set('topic', e.target.value)} className={fieldCls(false)}>
+                    <label htmlFor="sc-contact-topic" className="sc-h block text-xs font-semibold mb-1.5">Topik</label>
+                    <select
+                        id="sc-contact-topic"
+                        value={form.topic}
+                        onChange={(e) => set('topic', e.target.value)}
+                        className={fieldCls(false)}
+                    >
                         {SUPPORT_TOPICS.map((t) => (
                             <option key={t} value={t}>
                                 {t}
@@ -809,31 +1078,30 @@ function ContactTab() {
 
                 <div>
                     <div className="flex items-center justify-between mb-1.5">
-                        <label className="block text-xs font-semibold text-slate-700">Pesan</label>
-                        <span className="text-[11px] text-slate-400 tabular-nums">{form.message.trim().length} karakter</span>
+                        <label htmlFor="sc-contact-message" className="sc-h block text-xs font-semibold">Pesan</label>
+                        <span className="sc-muted text-xs tabular-nums">{form.message.trim().length} karakter</span>
                     </div>
                     <textarea
+                        id="sc-contact-message"
                         rows={4}
                         value={form.message}
                         onChange={(e) => set('message', e.target.value)}
                         onBlur={() => touch('message')}
                         placeholder="Tulis kendala atau pertanyaan Anda selengkap mungkin"
+                        aria-invalid={Boolean(touched.message && errors.message)}
                         className={`${fieldCls(touched.message && errors.message)} resize-none`}
                     />
-                    {touched.message && errors.message && <p className="text-red-500 text-[11px] font-semibold mt-1">{errors.message}</p>}
+                    {touched.message && errors.message && <p className="sc-error">{errors.message}</p>}
                 </div>
 
-                <button
-                    type="submit"
-                    className="group w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm py-3 rounded-xl transition duration-200 hover:-translate-y-0.5 active:scale-[.98]"
-                >
+                <button type="submit" className="group sc-btn sc-btn-primary sc-btn-block">
                     Kirim Pesan
                     <span className="transition-transform duration-200 group-hover:translate-x-1">
                         <IconSend />
                     </span>
                 </button>
 
-                <p className="text-[11px] text-slate-400 leading-relaxed">
+                <p className="sc-muted text-xs leading-relaxed" aria-live="polite">
                     {sent
                         ? 'Aplikasi email Anda dibuka dengan pesan yang sudah terisi. Tekan Kirim di sana untuk menyelesaikan.'
                         : 'Tombol ini membuka aplikasi email Anda dengan pesan yang sudah terisi, ditujukan ke ' + CONTACT.email + '.'}
@@ -845,16 +1113,47 @@ function ContactTab() {
 
 /* ---------- jendela dukungan (3 tab) ---------- */
 function SupportModal({ tab, onTab, onClose }) {
+    const panelRef = useRef(null);
+    const closeRef = useRef(onClose);
+    closeRef.current = onClose;
+
     useEffect(() => {
-        const onKey = (e) => e.key === 'Escape' && onClose();
-        window.addEventListener('keydown', onKey);
+        const previous = document.activeElement;
         const prevOverflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
+        if (panelRef.current) panelRef.current.focus();
+
+        const onKey = (e) => {
+            if (e.key === 'Escape') {
+                closeRef.current();
+                return;
+            }
+            // perangkap fokus: Tab tetap berputar di dalam jendela
+            if (e.key === 'Tab' && panelRef.current) {
+                const focusable = panelRef.current.querySelectorAll(
+                    'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                if (!focusable.length) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                const current = document.activeElement;
+                if (e.shiftKey && (current === first || current === panelRef.current)) {
+                    e.preventDefault();
+                    last.focus();
+                } else if (!e.shiftKey && current === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        };
+
+        window.addEventListener('keydown', onKey);
         return () => {
             window.removeEventListener('keydown', onKey);
             document.body.style.overflow = prevOverflow;
+            if (previous && typeof previous.focus === 'function') previous.focus();
         };
-    }, [onClose]);
+    }, []);
 
     const tabs = [
         { key: 'help', label: 'Pusat Bantuan', icon: <IconBook className="w-4 h-4" /> },
@@ -868,53 +1167,45 @@ function SupportModal({ tab, onTab, onClose }) {
     };
 
     return (
-        <div onClick={onClose} className="sc-fade fixed inset-0 z-[80] bg-slate-900/50 flex items-end sm:items-center justify-center sm:p-4">
+        <div onClick={onClose} className="sc-fade sc-overlay fixed inset-0 z-[80] flex items-end sm:items-center justify-center sm:p-4">
             <div
+                ref={panelRef}
+                tabIndex={-1}
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
                 aria-label={titles[tab][0]}
-                className="sc-pop bg-white w-full sm:max-w-3xl rounded-t-3xl sm:rounded-3xl max-h-[92vh] flex flex-col overflow-hidden"
+                className="sc-pop sc-modal w-full sm:max-w-3xl rounded-t-3xl sm:rounded-3xl max-h-[92dvh] flex flex-col overflow-hidden"
             >
-                <div className="px-6 pt-5 pb-0 border-b border-slate-100">
+                <div className="sc-modal-head px-5 sm:px-6 pt-5 pb-0">
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <h3 className="text-lg font-extrabold text-[#14214f] tracking-tight">{titles[tab][0]}</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">{titles[tab][1]}</p>
+                            <h3 className="sc-h text-lg font-extrabold tracking-tight">{titles[tab][0]}</h3>
+                            <p className="sc-muted text-xs mt-0.5">{titles[tab][1]}</p>
                         </div>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            aria-label="Tutup"
-                            className="w-9 h-9 shrink-0 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition active:scale-90"
-                        >
+                        <button type="button" onClick={onClose} aria-label="Tutup" className="sc-iconbtn -mt-1 -mr-2">
                             <IconXMark className="w-5 h-5" />
                         </button>
                     </div>
 
-                    <div role="tablist" className="flex gap-1 mt-4 overflow-x-auto">
-                        {tabs.map((t) => {
-                            const active = tab === t.key;
-                            return (
-                                <button
-                                    key={t.key}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={active}
-                                    onClick={() => onTab(t.key)}
-                                    className={`shrink-0 inline-flex items-center gap-2 px-4 py-3 -mb-px text-sm font-bold border-b-2 transition-colors duration-200 ${
-                                        active ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
-                                    }`}
-                                >
-                                    {t.icon}
-                                    {t.label}
-                                </button>
-                            );
-                        })}
+                    <div role="tablist" className="flex gap-1 mt-3 overflow-x-auto">
+                        {tabs.map((t) => (
+                            <button
+                                key={t.key}
+                                type="button"
+                                role="tab"
+                                aria-selected={tab === t.key}
+                                onClick={() => onTab(t.key)}
+                                className="sc-tab"
+                            >
+                                {t.icon}
+                                {t.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                <div key={tab} className="sc-fade flex-1 overflow-y-auto p-6">
+                <div key={tab} className="sc-fade flex-1 overflow-y-auto p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6">
                     {tab === 'help' && <HelpTab onContact={() => onTab('contact')} />}
                     {tab === 'faq' && <FaqTab onContact={() => onTab('contact')} />}
                     {tab === 'contact' && <ContactTab />}
@@ -929,17 +1220,59 @@ function SupportModal({ tab, onTab, onClose }) {
 /* ================================================================== */
 export default function Welcome({ canLogin, canRegister, auth }) {
     const [active, setActive] = useState('beranda');
-
-    // halaman beranda publik selalu memakai tema bawaan (Samudra)
-    useEffect(() => {
-        document.documentElement.setAttribute('data-theme', 'samudra');
-    }, []);
+    const [theme, setTheme] = useState(THEME_LIGHT);
     const [scrolled, setScrolled] = useState(false);
     const [support, setSupport] = useState(null); // null | 'help' | 'faq' | 'contact'
     const [menuOpen, setMenuOpen] = useState(false);
     const [showTop, setShowTop] = useState(false);
     const progressRef = useRef(null);
-    const heroRef = useRef(null);
+    const rootRef = useRef(null);
+
+    const isDark = theme === THEME_DARK;
+
+    /* Muat mode: pilihan tersimpan, kalau belum ada ikuti pengaturan perangkat */
+    useEffect(() => {
+        const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+        const saved = readSavedTheme();
+        if (saved) {
+            setTheme(saved === THEME_DARK ? THEME_DARK : THEME_LIGHT);
+        } else if (mq && mq.matches) {
+            setTheme(THEME_DARK);
+        }
+
+        // selama pengguna belum memilih sendiri, ikuti perubahan mode perangkat
+        const onSystemChange = (e) => {
+            if (!readSavedTheme()) setTheme(e.matches ? THEME_DARK : THEME_LIGHT);
+        };
+        if (mq && mq.addEventListener) mq.addEventListener('change', onSystemChange);
+        return () => {
+            if (mq && mq.removeEventListener) mq.removeEventListener('change', onSystemChange);
+        };
+    }, []);
+
+    /* Sinkronkan atribut tema ke dokumen (dipakai bagian lain aplikasi) */
+    useEffect(() => {
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme === THEME_DARK ? 'dark' : 'light';
+    }, [theme]);
+
+    useEffect(() => {
+        return () => {
+            document.documentElement.style.colorScheme = '';
+        };
+    }, []);
+
+    const toggleTheme = () => {
+        const next = isDark ? THEME_LIGHT : THEME_DARK;
+        const root = rootRef.current;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (root && !reduceMotion) {
+            root.classList.add('sc-switching');
+            window.setTimeout(() => root.classList.remove('sc-switching'), 450);
+        }
+        setTheme(next);
+        saveTheme(next);
+    };
 
     /* Semua efek terkait scroll dalam satu listener (dibatasi rAF) */
     useEffect(() => {
@@ -965,14 +1298,6 @@ export default function Welcome({ canLogin, canRegister, auth }) {
             }
             if (vh + y >= document.body.scrollHeight - 4) current = NAV_ITEMS[NAV_ITEMS.length - 1].id;
             setActive(current);
-
-            // parallax
-            document.querySelectorAll('[data-parallax]').forEach((el) => {
-                const section = el.closest('section') || el.parentElement;
-                const r = section.getBoundingClientRect();
-                const offset = r.top + r.height / 2 - vh / 2;
-                el.style.transform = `translate3d(0, ${(-offset * parseFloat(el.dataset.parallax)).toFixed(1)}px, 0)`;
-            });
         };
 
         const onScroll = () => {
@@ -991,14 +1316,13 @@ export default function Welcome({ canLogin, canRegister, auth }) {
         };
     }, []);
 
-    /* Cahaya lembut mengikuti kursor di hero */
-    const onHeroMove = (e) => {
-        const el = heroRef.current;
-        if (!el) return;
-        const r = el.getBoundingClientRect();
-        el.style.setProperty('--mx', `${e.clientX - r.left}px`);
-        el.style.setProperty('--my', `${e.clientY - r.top}px`);
-    };
+    /* Esc menutup menu mobile */
+    useEffect(() => {
+        if (!menuOpen) return;
+        const onKey = (e) => e.key === 'Escape' && setMenuOpen(false);
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [menuOpen]);
 
     const go = (e, id) => {
         setMenuOpen(false);
@@ -1006,12 +1330,12 @@ export default function Welcome({ canLogin, canRegister, auth }) {
     };
 
     const features = [
-        { icon: <IconBolt />, title: 'Transaksi Cepat', desc: 'POS 4 kolom dengan tombol pecahan pintas dan kalkulator kembalian otomatis.', tint: 'bg-blue-100 text-blue-600' },
-        { icon: <IconBox />, title: 'Manajemen Stok', desc: 'Pantau pergerakan stok barang secara real-time dan kelola inventaris toko.', tint: 'bg-indigo-100 text-indigo-600' },
-        { icon: <IconChart />, title: 'Laporan Penjualan', desc: 'Rekap penjualan dan performa transaksi toko secara otomatis dan transparan.', tint: 'bg-blue-100 text-blue-600' },
-        { icon: <IconStore />, title: 'Sistem Multi-Tenant', desc: 'Kelola banyak toko dalam satu aplikasi dengan data terisolasi dan Kode Unik Toko.', tint: 'bg-indigo-100 text-indigo-600' },
-        { icon: <IconUser />, title: 'Kelola Karyawan', desc: 'Atur peran (Admin & Kasir), hak akses, dan aktivitas staf lewat pop-up praktis.', tint: 'bg-blue-100 text-blue-600' },
-        { icon: <IconTag />, title: 'Diskon & Promo Fleksibel', desc: 'Atur promo toko dan aktifkan atau nonaktifkan kapan saja untuk menarik pelanggan.', tint: 'bg-violet-100 text-violet-600' },
+        { icon: <IconBolt />, title: 'Transaksi Cepat', desc: 'POS 4 kolom dengan tombol pecahan pintas dan kalkulator kembalian otomatis.', tone: 'indigo' },
+        { icon: <IconBox />, title: 'Manajemen Stok', desc: 'Pantau pergerakan stok barang secara real-time dan kelola inventaris toko.', tone: 'indigo' },
+        { icon: <IconChart />, title: 'Laporan Penjualan', desc: 'Rekap penjualan dan performa transaksi toko secara otomatis dan transparan.', tone: 'indigo' },
+        { icon: <IconStore />, title: 'Sistem Multi-Tenant', desc: 'Kelola banyak toko dalam satu aplikasi dengan data terisolasi dan Kode Unik Toko.', tone: 'indigo' },
+        { icon: <IconUser />, title: 'Kelola Karyawan', desc: 'Atur peran (Admin & Kasir), hak akses, dan aktivitas staf lewat pop-up praktis.', tone: 'indigo' },
+        { icon: <IconTag />, title: 'Diskon & Promo Fleksibel', desc: 'Atur promo toko dan aktifkan atau nonaktifkan kapan saja untuk menarik pelanggan.', tone: 'indigo' },
     ];
 
     const steps = [
@@ -1021,76 +1345,89 @@ export default function Welcome({ canLogin, canRegister, auth }) {
     ];
 
     const stats = [
-        { icon: <IconBag />, value: <CountUp to={10000} suffix="+" />, label: 'Pengguna Aktif' },
-        { icon: <IconHeart />, value: <CountUp to={98} suffix="%" />, label: 'Tingkat Kepuasan' },
-        { icon: <IconHeadset />, value: '24/7', label: 'Dukungan Pelanggan' },
+        { icon: <IconBag />, value: 'POS', label: 'Transaksi praktis' },
+        { icon: <IconHeart />, value: 'Stok', label: 'Lebih terpantau' },
+        { icon: <IconHeadset />, value: 'Data', label: 'Laporan terukur' },
     ];
 
     return (
-        <div className="min-h-screen bg-white text-slate-800 font-sans selection:bg-blue-600 selection:text-white overflow-x-hidden">
-            <Head title="SmartCash - Solusi Kasir Modern" />
+        <div ref={rootRef} data-mode={isDark ? 'dark' : 'light'} className="sc-landing min-h-screen overflow-x-hidden">
+            <Head title="SmartCash - Solusi Kasir Modern">
+                <meta name="theme-color" content={isDark ? '#0A1230' : '#F3F7FF'} />
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                <link
+                    rel="stylesheet"
+                    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+                />
+            </Head>
             <style>{css}</style>
 
+            <a href="#konten" className="sc-skip">
+                Lewati ke konten utama
+            </a>
+
             {/* ===================== NAVBAR ===================== */}
-            <header
-                className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-                    scrolled || menuOpen ? 'bg-white/90 backdrop-blur-md shadow-sm' : 'bg-white/60 backdrop-blur-sm'
-                }`}
-            >
-                <div className="max-w-7xl mx-auto px-6 h-[72px] flex items-center justify-between gap-6">
-                    <a href="#beranda" onClick={(e) => go(e, 'beranda')} className="group flex items-center gap-2.5">
-                        <Logo size="w-11 h-11" />
+            <header className={`sc-header fixed top-0 inset-x-0 z-50 ${scrolled || menuOpen ? 'is-scrolled' : ''}`}>
+                <div className="max-w-7xl mx-auto px-5 sm:px-6 h-[72px] flex items-center justify-between gap-6">
+                    <a href="#beranda" onClick={(e) => go(e, 'beranda')} className="group flex items-center gap-2.5" aria-label="SmartCash, kembali ke beranda">
+                        <span className="sc-logo-tile">
+                            <Logo size="w-10 h-10" />
+                        </span>
                         <span>
-                            <span className="block text-[22px] font-extrabold tracking-tight text-[#14214f] leading-none">
-                                Smart<span className="text-blue-600">Cash</span>
+                            <span className="sc-h block text-[22px] font-extrabold tracking-tight leading-none">
+                                Smart<span className="sc-hl">Cash</span>
                             </span>
-                            <span className="block text-[11px] font-medium text-slate-500 mt-1">Solusi Kasir Modern</span>
+                            <span className="sc-muted hidden sm:block text-xs font-medium mt-1">Solusi Kasir Modern</span>
                         </span>
                     </a>
 
-                    <nav className="hidden md:flex items-center gap-9 text-sm font-medium text-slate-700">
+                    <nav className="hidden lg:flex items-center gap-6 xl:gap-9" aria-label="Navigasi utama">
                         {NAV_ITEMS.map((item) => (
                             <a
                                 key={item.id}
                                 href={`#${item.id}`}
                                 onClick={(e) => go(e, item.id)}
-                                className={`relative py-2 transition-colors ${
-                                    active === item.id ? 'text-blue-600 font-semibold' : 'hover:text-blue-600'
-                                }`}
+                                aria-current={active === item.id ? 'true' : undefined}
+                                className="sc-nav-link"
                             >
                                 {item.label}
-                                <span
-                                    className={`absolute left-0 right-0 -bottom-0.5 h-0.5 rounded-full bg-blue-600 transition-transform duration-300 origin-left ${
-                                        active === item.id ? 'scale-x-100' : 'scale-x-0'
-                                    }`}
-                                />
+                                <span className="sc-nav-bar" />
                             </a>
                         ))}
                     </nav>
 
-                    <div className="flex items-center gap-3 sm:gap-5">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isDark}
+                            onClick={toggleTheme}
+                            aria-label={isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'}
+                            title={isDark ? 'Mode terang' : 'Mode gelap'}
+                            className="sc-btn sc-btn-icon sc-theme-btn"
+                        >
+                            <span className={`sc-theme-icon ${isDark ? '' : 'is-off'}`}>
+                                <IconSun />
+                            </span>
+                            <span className={`sc-theme-icon ${isDark ? 'is-off' : ''}`}>
+                                <IconMoon />
+                            </span>
+                        </button>
+
                         {auth?.user ? (
-                            <Link
-                                href={route('dashboard')}
-                                className="sc-shine bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-md shadow-blue-500/25 transition"
-                            >
+                            <Link href={route('dashboard')} className="sc-btn sc-btn-primary sc-sm-up">
                                 Dashboard
                             </Link>
                         ) : (
                             <>
                                 {canLogin && (
-                                    <Link
-                                        href={route('login')}
-                                        className="text-sm font-semibold text-slate-800 hover:text-blue-600 transition-colors"
-                                    >
+                                    <Link href={route('login')} className="sc-link sc-sm-up">
                                         Masuk
                                     </Link>
                                 )}
                                 {canRegister && (
-                                    <Link
-                                        href={route('register')}
-                                        className="group sc-shine hidden sm:inline-flex bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5 hover:shadow-lg text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-md shadow-blue-500/25 transition items-center gap-2"
-                                    >
+                                    <Link href={route('register')} className="group sc-btn sc-btn-primary sc-sm-up">
                                         Mulai Sekarang
                                         <IconArrow className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                                     </Link>
@@ -1101,11 +1438,12 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                         <button
                             type="button"
                             onClick={() => setMenuOpen((v) => !v)}
-                            className="md:hidden w-10 h-10 rounded-xl border border-slate-200 flex items-center justify-center text-slate-700"
-                            aria-label="Buka menu"
+                            className="sc-btn sc-btn-icon sc-below-lg"
+                            aria-label={menuOpen ? 'Tutup menu' : 'Buka menu'}
                             aria-expanded={menuOpen}
+                            aria-controls="sc-mobile-menu"
                         >
-                            <svg viewBox="0 0 24 24" className="w-5 h-5" {...iconProps}>
+                            <svg viewBox="0 0 24 24" className="w-5 h-5" {...iconProps} aria-hidden="true">
                                 {menuOpen ? <path d="M6 6l12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
                             </svg>
                         </button>
@@ -1113,110 +1451,147 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                 </div>
 
                 {menuOpen && (
-                    <nav className="md:hidden border-t border-slate-100 bg-white px-6 py-3 flex flex-col">
+                    <nav id="sc-mobile-menu" aria-label="Navigasi seluler" className="sc-menu lg:hidden px-5 sm:px-6 py-3 flex flex-col">
                         {NAV_ITEMS.map((item) => (
                             <a
                                 key={item.id}
                                 href={`#${item.id}`}
                                 onClick={(e) => go(e, item.id)}
-                                className={`py-3 text-sm font-medium ${active === item.id ? 'text-blue-600' : 'text-slate-700'}`}
+                                aria-current={active === item.id ? 'true' : undefined}
+                                className="sc-menu-link"
                             >
                                 {item.label}
                             </a>
                         ))}
-                        {!auth?.user && canRegister && (
-                            <Link
-                                href={route('register')}
-                                className="mt-2 mb-2 bg-blue-600 text-white text-center px-5 py-3 rounded-full text-sm font-semibold"
-                            >
-                                Mulai Sekarang
+                        {auth?.user ? (
+                            <Link href={route('dashboard')} className="sc-btn sc-btn-primary sc-btn-block mt-2 mb-2 sm:!hidden">
+                                Dashboard
                             </Link>
+                        ) : (
+                            <>
+                                {canLogin && (
+                                    <Link href={route('login')} className="sc-menu-link sm:!hidden">
+                                        Masuk
+                                    </Link>
+                                )}
+                                {canRegister && (
+                                    <Link href={route('register')} className="sc-btn sc-btn-primary sc-btn-block mt-2 mb-2 sm:!hidden">
+                                        Mulai Sekarang
+                                    </Link>
+                                )}
+                            </>
                         )}
                     </nav>
                 )}
 
                 {/* garis progress scroll */}
                 <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-transparent">
-                    <div
-                        ref={progressRef}
-                        className="h-full w-0 bg-gradient-to-r from-sky-400 via-blue-600 to-indigo-600 rounded-r-full"
-                    />
+                    <div ref={progressRef} className="sc-progress h-full w-0 rounded-r-full" />
                 </div>
             </header>
 
-            <main>
+            <main id="konten" tabIndex={-1} className="outline-none">
                 {/* ===================== BERANDA ===================== */}
                 <section
                     id="beranda"
-                    ref={heroRef}
-                    onMouseMove={onHeroMove}
-                    className="relative scroll-mt-[72px] min-h-screen pt-[72px] flex flex-col bg-gradient-to-b from-blue-50/70 via-blue-50/30 to-white overflow-hidden"
+                    className="sc-bg relative scroll-mt-[72px] min-h-[calc(100svh-72px)] pt-[72px] flex flex-col overflow-hidden"
                 >
-                    {/* cahaya mengikuti kursor */}
-                    <div
-                        className="absolute inset-0 pointer-events-none"
-                        style={{
-                            background:
-                                'radial-gradient(420px circle at var(--mx, 70%) var(--my, 35%), rgba(37,99,235,.10), transparent 65%)',
-                        }}
-                    />
-                    {/* hiasan latar */}
-                    <div data-parallax="0.12" className="absolute -top-16 -left-24 w-80 h-80 pointer-events-none">
-                        <div className="sc-drift w-full h-full rounded-full bg-blue-200/40 blur-3xl" />
-                    </div>
-                    <div data-parallax="-0.08" className="absolute top-1/3 -right-24 w-96 h-96 pointer-events-none">
-                        <div className="sc-drift w-full h-full rounded-full bg-indigo-200/40 blur-3xl" style={{ animationDelay: '-6s' }} />
-                    </div>
-                    <div data-parallax="0.2" className="absolute top-[28%] left-[46%] pointer-events-none hidden lg:block">
-                        <span className="sc-twinkle block w-2.5 h-2.5 rounded-full bg-blue-400" />
-                    </div>
-                    <div data-parallax="0.3" className="absolute top-[70%] left-[8%] pointer-events-none hidden lg:block">
-                        <span className="sc-twinkle block w-3 h-3 rounded-full bg-indigo-300" style={{ animationDelay: '-1.2s' }} />
-                    </div>
-
-                    <div className="relative flex-1 max-w-7xl w-full mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-10 items-center py-12">
+                    <div className="relative flex-1 max-w-7xl w-full mx-auto px-5 sm:px-6 grid grid-cols-1 lg:grid-cols-[1fr_0.95fr] gap-12 lg:gap-20 items-center py-14 sm:py-20">
                         <div className="space-y-6 max-w-xl">
                             <Reveal>
-                                <Badge icon={<IconSpark />}>Solusi Kasir Modern untuk Bisnis Anda</Badge>
+                                <Badge>Satu sistem untuk bisnis yang terus bergerak</Badge>
                             </Reveal>
 
                             <Reveal delay={120}>
-                                <h1 className="text-4xl sm:text-5xl lg:text-[56px] font-extrabold text-[#14214f] tracking-tight leading-[1.1]">
-                                    Kelola Transaksi
+                                <h1 className="sc-h text-[2rem] sm:text-5xl lg:text-[60px] font-extrabold tracking-tight leading-[1.08]">
+                                    Kasir Lebih Sigap.
                                     <br />
-                                    <span className="text-blue-600">Lebih Mudah &amp; Cepat</span>
+                                    <span className="sc-hl">Bisnis Lebih Terkendali.</span>
                                 </h1>
                             </Reveal>
 
                             <Reveal delay={240}>
-                                <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
-                                    SmartCash membantu Anda mengelola transaksi, stok barang, dan laporan penjualan dalam satu
-                                    aplikasi kasir yang praktis dan modern.
+                                <p className="sc-body text-base sm:text-lg leading-relaxed max-w-lg">
+                                    Layani pelanggan, pantau stok, dan pahami penjualan dari satu aplikasi kasir modern yang
+                                    dibuat untuk menyederhanakan operasional toko.
                                 </p>
                             </Reveal>
 
-                            {!auth?.user && canRegister && (
-                                <Reveal delay={360}>
-                                    <div className="pt-2">
-                                        <Link
-                                            href={route('register')}
-                                            className="group sc-shine sc-ring inline-flex items-center gap-2.5 bg-blue-600 hover:bg-blue-700 hover:-translate-y-1 text-white px-8 py-4 rounded-full text-sm font-semibold shadow-lg shadow-blue-500/30 transition"
-                                        >
-                                            Mulai Sekarang
+                            <Reveal delay={360}>
+                                <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-2">
+                                    {!auth?.user && canRegister && (
+                                        <Link href={route('register')} className="group sc-btn sc-btn-primary sc-btn-lg">
+                                            Coba SmartCash
                                             <IconArrow className="w-4 h-4 transition-transform group-hover:translate-x-1.5" />
                                         </Link>
-                                    </div>
-                                </Reveal>
-                            )}
+                                    )}
+                                    {auth?.user && (
+                                        <Link href={route('dashboard')} className="group sc-btn sc-btn-primary sc-btn-lg">
+                                            Buka Dashboard
+                                            <IconArrow className="w-4 h-4 transition-transform group-hover:translate-x-1.5" />
+                                        </Link>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setSupport('help')}
+                                        className="sc-btn sc-btn-outline sc-btn-lg"
+                                    >
+                                        Lihat Pusat Bantuan
+                                    </button>
+                                </div>
+                            </Reveal>
+
+                            <Reveal delay={480}>
+                                <div className="sc-muted flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 text-xs font-medium">
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className="sc-dot sc-dot-ok" />
+                                        Transaksi dan stok dalam satu alur
+                                    </span>
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className="sc-dot sc-dot-sky" />
+                                        Akses mudah dari browser
+                                    </span>
+                                </div>
+                            </Reveal>
                         </div>
 
                         <Reveal variant="zoom" delay={200}>
-                            <div data-parallax="0.05">
-                                <Tilt>
-                                    <div className="sc-float">
-                                        <Illustration src={IMG.hero} alt="Kasir menggunakan aplikasi SmartCash" fade="78%" />
+                            <div className="relative mx-auto w-full max-w-[620px]">
+                                <div className="sc-card sc-shadow-lg relative rounded-3xl p-3 sm:p-5">
+                                    <div className="flex items-center justify-between px-3 pb-3 pt-1">
+                                        <div className="flex items-center gap-2" aria-hidden="true">
+                                            <span className="h-2.5 w-2.5 rounded-full bg-rose-400" />
+                                            <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                                            <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                                        </div>
+                                        <span className="sc-pill">Smart POS</span>
                                     </div>
-                                </Tilt>
+                                    <div className="sc-stage rounded-2xl">
+                                        <Illustration
+                                            src={IMG.hero}
+                                            eager
+                                            alt="Kasir menggunakan aplikasi SmartCash untuk melayani pelanggan"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="sc-card sc-shadow-md absolute -left-2 top-[18%] hidden items-center gap-3 rounded-2xl p-3 sm:flex sm:-left-8 sm:p-4">
+                                    <span className="sc-tone sc-tone-ok flex h-10 w-10 items-center justify-center rounded-xl">
+                                        <IconBolt className="h-5 w-5" />
+                                    </span>
+                                    <span>
+                                        <span className="sc-muted block text-xs font-semibold">Kasir aktif</span>
+                                        <span className="sc-h block text-sm font-bold">Transaksi cepat</span>
+                                    </span>
+                                </div>
+                                <div className="sc-card sc-shadow-md absolute -bottom-4 right-1 flex items-center gap-3 rounded-2xl p-3 sm:-right-5 sm:p-4">
+                                    <span className="sc-tone sc-tone-indigo flex h-10 w-10 items-center justify-center rounded-xl">
+                                        <IconChart className="h-5 w-5" />
+                                    </span>
+                                    <span>
+                                        <span className="sc-muted block text-xs font-semibold">Ringkasan usaha</span>
+                                        <span className="sc-h block text-sm font-bold">Semua lebih terpantau</span>
+                                    </span>
+                                </div>
                             </div>
                         </Reveal>
                     </div>
@@ -1227,87 +1602,62 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                 </section>
 
                 {/* ===================== FITUR ===================== */}
-                <section id="fitur" className="relative scroll-mt-[72px] min-h-screen flex items-center bg-white py-20 overflow-hidden">
-                    <div data-parallax="0.1" className="absolute top-10 right-[-6rem] w-72 h-72 pointer-events-none">
-                        <div className="sc-drift w-full h-full rounded-full bg-blue-100/60 blur-3xl" />
-                    </div>
-
-                    <div className="relative max-w-7xl w-full mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                        <div className="lg:col-span-5 space-y-5">
-                            <Reveal variant="left">
-                                <Badge icon={<IconSpark />}>Fitur Unggulan</Badge>
+                <section id="fitur" className="sc-bg-alt scroll-mt-[72px] py-20 sm:py-24">
+                    <div className="max-w-7xl w-full mx-auto px-5 sm:px-6 space-y-10">
+                        <div className="max-w-2xl space-y-4">
+                            <Reveal>
+                                <Badge>Fitur Unggulan</Badge>
                             </Reveal>
-                            <Reveal variant="left" delay={100}>
-                                <h2 className="text-3xl sm:text-4xl font-extrabold text-[#14214f] tracking-tight leading-tight">
-                                    Semua yang Anda Butuhkan
-                                    <br />
-                                    <span className="text-blue-600">dalam Satu Aplikasi</span>
+                            <Reveal delay={100}>
+                                <h2 className="sc-h text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+                                    Semua kebutuhan toko, <span className="sc-hl">dalam satu tempat.</span>
                                 </h2>
                             </Reveal>
-                            <Reveal variant="left" delay={200}>
-                                <p className="text-slate-600 leading-relaxed max-w-md">
-                                    Berbagai fitur lengkap yang dirancang untuk memudahkan operasional bisnis Anda.
+                            <Reveal delay={200}>
+                                <p className="sc-body max-w-xl leading-relaxed">
+                                    Dari melayani pelanggan hingga memantau hasil penjualan, SmartCash membantu menjaga alur kerja tetap rapi.
                                 </p>
                             </Reveal>
                         </div>
 
-                        <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                             {features.map((f, i) => (
-                                <div
-                                    key={f.title}
-                                    className={`border-slate-100 ${i % 3 !== 0 ? 'sm:border-l' : ''} ${i >= 3 ? 'sm:border-t' : ''}`}
-                                >
-                                    <Reveal delay={i * 90} className="h-full">
-                                        <FeatureItem {...f} />
-                                    </Reveal>
-                                </div>
+                                <Reveal key={f.title} delay={i * 70} className="h-full">
+                                    <FeatureItem {...f} />
+                                </Reveal>
                             ))}
                         </div>
                     </div>
                 </section>
 
                 {/* ===================== CARA KERJA ===================== */}
-                <section
-                    id="cara-kerja"
-                    className="relative scroll-mt-[72px] min-h-screen flex items-center bg-gradient-to-b from-white via-blue-50/50 to-white py-20 overflow-hidden"
-                >
-                    <div data-parallax="-0.1" className="absolute bottom-0 left-[-5rem] w-72 h-72 pointer-events-none">
-                        <div className="sc-drift w-full h-full rounded-full bg-indigo-100/70 blur-3xl" />
-                    </div>
-
-                    <div className="relative max-w-7xl w-full mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-                        <div className="lg:col-span-6 space-y-8">
-                            <div className="space-y-5">
+                <section id="cara-kerja" className="sc-bg scroll-mt-[72px] py-20 sm:py-24">
+                    <div className="max-w-7xl w-full mx-auto px-5 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                        <div className="lg:col-span-7 space-y-8">
+                            <div className="max-w-2xl space-y-4">
                                 <Reveal variant="left">
-                                    <Badge icon={<IconCycle />}>Cara Kerja</Badge>
+                                    <Badge>Cara Kerja</Badge>
                                 </Reveal>
                                 <Reveal variant="left" delay={100}>
-                                    <h2 className="text-3xl sm:text-4xl font-extrabold text-[#14214f] tracking-tight leading-tight">
-                                        Mulai Menggunakan <span className="text-blue-600">SmartCash</span>
+                                    <h2 className="sc-h text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+                                        Mulai Menggunakan <span className="sc-hl">SmartCash</span>
                                         <br />
                                         dalam 3 Langkah Mudah
                                     </h2>
                                 </Reveal>
                             </div>
 
-                            <ol className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-4">
+                            <ol className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                                 {steps.map((s, i) => (
                                     <li key={s.title}>
-                                        <Reveal delay={200 + i * 180}>
-                                            <div className="group flex sm:flex-col gap-3 rounded-2xl p-3 -m-3 transition duration-300 hover:bg-white hover:shadow-lg hover:shadow-blue-900/5 hover:-translate-y-1">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="w-10 h-10 shrink-0 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center shadow-md shadow-blue-500/30 transition duration-300 group-hover:scale-125 group-hover:bg-indigo-600">
-                                                        {i + 1}
-                                                    </span>
-                                                    {i < steps.length - 1 && (
-                                                        <span className="sc-nudge hidden sm:block text-slate-400 ml-auto mr-2">
-                                                            <IconArrow className="w-5 h-5" />
-                                                        </span>
-                                                    )}
-                                                </div>
+                                        <Reveal delay={200 + i * 120} className="h-full">
+                                            <div className="group sc-card sc-card-lift h-full flex flex-col gap-5 rounded-2xl p-5">
+                                                <span className="sc-tone sc-tone-indigo flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold">
+                                                    0{i + 1}
+                                                </span>
                                                 <div>
-                                                    <h4 className="font-bold text-sm text-slate-900">{s.title}</h4>
-                                                    <p className="text-xs text-slate-500 leading-relaxed mt-1">{s.desc}</p>
+                                                    <h4 className="sc-h font-bold text-sm">{s.title}</h4>
+                                                    <p className="sc-muted text-sm leading-relaxed mt-1">{s.desc}</p>
                                                 </div>
                                             </div>
                                         </Reveal>
@@ -1316,18 +1666,15 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                             </ol>
                         </div>
 
-                        <div className="lg:col-span-6">
+                        <div className="lg:col-span-5">
                             <Reveal variant="right" delay={150}>
-                                <div data-parallax="0.05">
-                                    <Tilt max={6}>
-                                        <div className="sc-float" style={{ animationDelay: '-2s' }}>
-                                            <Illustration
-                                                src={IMG.dashboard}
-                                                alt="Tampilan dashboard SmartCash di laptop"
-                                                fade="58%"
-                                            />
-                                        </div>
-                                    </Tilt>
+                                <div className="sc-card sc-shadow-lg rounded-3xl p-3 sm:p-5">
+                                    <div className="sc-stage rounded-2xl">
+                                        <Illustration
+                                            src={IMG.dashboard}
+                                            alt="Tampilan dashboard SmartCash di laptop"
+                                        />
+                                    </div>
                                 </div>
                             </Reveal>
                         </div>
@@ -1335,28 +1682,21 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                 </section>
 
                 {/* ===================== TENTANG KAMI ===================== */}
-                <section
-                    id="tentang"
-                    className="relative scroll-mt-[72px] min-h-screen flex items-center bg-gradient-to-b from-white to-blue-50/60 py-20 overflow-hidden"
-                >
-                    <div data-parallax="0.1" className="absolute top-20 right-[-4rem] w-80 h-80 pointer-events-none">
-                        <div className="sc-drift w-full h-full rounded-full bg-blue-200/40 blur-3xl" />
-                    </div>
-
-                    <div className="relative max-w-7xl w-full mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-                        <div className="space-y-6 max-w-xl">
+                <section id="tentang" className="sc-bg-alt scroll-mt-[72px] py-20 sm:py-24">
+                    <div className="max-w-7xl w-full mx-auto px-5 sm:px-6 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        <div className="order-2 space-y-6 max-w-xl lg:order-1">
                             <Reveal variant="left">
-                                <Badge icon={<IconCycle />}>Tentang Kami</Badge>
+                                <Badge>Tentang SmartCash</Badge>
                             </Reveal>
                             <Reveal variant="left" delay={100}>
-                                <h2 className="text-3xl sm:text-4xl font-extrabold text-[#14214f] tracking-tight leading-tight">
+                                <h2 className="sc-h text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
                                     Bersama Membangun
                                     <br />
-                                    <span className="text-blue-600">Bisnis yang Lebih Baik</span>
+                                    <span className="sc-hl">Bisnis yang Lebih Baik</span>
                                 </h2>
                             </Reveal>
                             <Reveal variant="left" delay={200}>
-                                <p className="text-slate-600 leading-relaxed">
+                                <p className="sc-body leading-relaxed">
                                     SmartCash adalah solusi kasir modern yang dirancang untuk membantu para pelaku usaha di
                                     Indonesia mengelola bisnis secara lebih mudah, efisien, dan aman.
                                 </p>
@@ -1364,32 +1704,35 @@ export default function Welcome({ canLogin, canRegister, auth }) {
 
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
                                 {stats.map((s, i) => (
-                                    <Reveal key={s.label} delay={300 + i * 120}>
-                                        <div className="group flex items-center gap-3 rounded-2xl px-3 py-3 transition duration-300 hover:bg-white hover:shadow-lg hover:shadow-blue-900/5 hover:-translate-y-1">
-                                            <span className="text-blue-600 transition duration-300 group-hover:scale-125 group-hover:rotate-6">
-                                                {s.icon}
-                                            </span>
+                                    <Reveal key={s.label} delay={300 + i * 120} className="h-full">
+                                        <div className="group sc-card sc-card-lift h-full flex flex-col gap-3 rounded-2xl px-4 py-4">
+                                            <span className="sc-accent">{s.icon}</span>
                                             <div>
-                                                <div className="font-extrabold text-[#14214f] leading-none">{s.value}</div>
-                                                <div className="text-[11px] text-slate-500 mt-1">{s.label}</div>
+                                                <div className="sc-h font-extrabold leading-none">{s.value}</div>
+                                                <div className="sc-muted text-xs mt-1">{s.label}</div>
                                             </div>
                                         </div>
                                     </Reveal>
                                 ))}
                             </div>
+                            {!auth?.user && canRegister && (
+                                <Reveal delay={650}>
+                                    <Link href={route('register')} className="group sc-btn sc-btn-primary">
+                                        Mulai gunakan SmartCash
+                                        <IconArrow className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                    </Link>
+                                </Reveal>
+                            )}
                         </div>
 
-                        <Reveal variant="right" delay={150}>
-                            <div data-parallax="0.05">
-                                <Tilt max={6}>
-                                    <div className="sc-float" style={{ animationDelay: '-4s' }}>
-                                        <Illustration
-                                            src={IMG.tim}
-                                            alt="Tim SmartCash bekerja bersama"
-                                            fade="58%"
-                                        />
-                                    </div>
-                                </Tilt>
+                        <Reveal variant="left" delay={150} className="order-1 lg:order-2">
+                            <div className="sc-card sc-shadow-lg rounded-3xl p-3 sm:p-5">
+                                <div className="sc-stage rounded-2xl">
+                                    <Illustration
+                                        src={IMG.tim}
+                                        alt="Tim SmartCash bekerja bersama"
+                                    />
+                                </div>
                             </div>
                         </Reveal>
                     </div>
@@ -1397,39 +1740,35 @@ export default function Welcome({ canLogin, canRegister, auth }) {
             </main>
 
             {/* ===================== FOOTER ===================== */}
-            <footer className="bg-[#16255a] text-slate-300">
-                <div className="max-w-7xl mx-auto px-6 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+            <footer className="sc-footer">
+                <div className="max-w-7xl mx-auto px-5 sm:px-6 py-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
                     <Reveal className="space-y-4">
-                        <a href="#beranda" onClick={(e) => go(e, 'beranda')} className="group flex items-center gap-2.5">
-                            <span className="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center">
+                        <a href="#beranda" onClick={(e) => go(e, 'beranda')} className="group sc-f-brand flex w-fit items-center gap-2.5" aria-label="SmartCash, kembali ke beranda">
+                            <span className="sc-f-logo w-11 h-11 rounded-xl p-1.5 flex items-center justify-center">
                                 <Logo size="w-full h-full" />
                             </span>
                             <span>
-                                <span className="block text-2xl font-extrabold text-white tracking-tight leading-none">
-                                    Smart<span className="text-sky-400">Cash</span>
+                                <span className="sc-h block text-2xl font-extrabold tracking-tight leading-none">
+                                    Smart<span className="sc-hl">Cash</span>
                                 </span>
-                                <span className="block text-[11px] font-medium text-slate-400 mt-1">Solusi Kasir Modern</span>
+                                <span className="sc-muted block text-xs font-medium mt-1">Solusi Kasir Modern</span>
                             </span>
                         </a>
                         <p className="text-sm leading-relaxed max-w-[220px]">Solusi kasir modern untuk mengelola bisnis Anda.</p>
                         <div className="flex items-center gap-3 pt-1">
-                            <SocialLink label="Facebook" hover="hover:bg-[#1877F2]">{SocialIcons.facebook}</SocialLink>
-                            <SocialLink label="Instagram" hover="hover:bg-gradient-to-tr hover:from-amber-400 hover:via-pink-500 hover:to-purple-600">{SocialIcons.instagram}</SocialLink>
-                            <SocialLink label="LinkedIn" hover="hover:bg-[#0A66C2]">{SocialIcons.linkedin}</SocialLink>
-                            <SocialLink label="YouTube" hover="hover:bg-[#FF0000]">{SocialIcons.youtube}</SocialLink>
+                            <SocialLink label="Facebook">{SocialIcons.facebook}</SocialLink>
+                            <SocialLink label="Instagram">{SocialIcons.instagram}</SocialLink>
+                            <SocialLink label="LinkedIn">{SocialIcons.linkedin}</SocialLink>
+                            <SocialLink label="YouTube">{SocialIcons.youtube}</SocialLink>
                         </div>
                     </Reveal>
 
                     <Reveal delay={100}>
-                        <h5 className="text-white font-semibold text-sm mb-4">Navigasi</h5>
-                        <ul className="space-y-2.5 text-sm">
+                        <h5 className="sc-f-h font-semibold text-sm mb-3">Navigasi</h5>
+                        <ul className="text-sm">
                             {NAV_ITEMS.map((item) => (
                                 <li key={item.id}>
-                                    <a
-                                        href={`#${item.id}`}
-                                        onClick={(e) => go(e, item.id)}
-                                        className="inline-block hover:text-white hover:translate-x-1.5 transition duration-300"
-                                    >
+                                    <a href={`#${item.id}`} onClick={(e) => go(e, item.id)} className="sc-f-link">
                                         {item.label}
                                     </a>
                                 </li>
@@ -1438,15 +1777,11 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                     </Reveal>
 
                     <Reveal delay={200}>
-                        <h5 className="text-white font-semibold text-sm mb-4">Dukungan</h5>
-                        <ul className="space-y-2.5 text-sm">
+                        <h5 className="sc-f-h font-semibold text-sm mb-3">Dukungan</h5>
+                        <ul className="text-sm">
                             {SUPPORT_LINKS.map((l) => (
                                 <li key={l.key}>
-                                    <button
-                                        type="button"
-                                        onClick={() => setSupport(l.key)}
-                                        className="inline-block text-left hover:text-white hover:translate-x-1.5 transition duration-300"
-                                    >
+                                    <button type="button" onClick={() => setSupport(l.key)} className="sc-f-link">
                                         {l.label}
                                     </button>
                                 </li>
@@ -1455,43 +1790,39 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                     </Reveal>
 
                     <Reveal delay={300}>
-                        <h5 className="text-white font-semibold text-sm mb-4">Hubungi Kami</h5>
-                        <ul className="space-y-3 text-sm">
+                        <h5 className="sc-f-h font-semibold text-sm mb-3">Hubungi Kami</h5>
+                        <ul className="text-sm">
                             <li>
-                                <a href={`mailto:${CONTACT.email}`} className="group flex items-center gap-3 hover:text-white transition-colors">
-                                    <span className="text-sky-400 transition-transform duration-300 group-hover:scale-125">
+                                <a href={`mailto:${CONTACT.email}`} className="group sc-f-link gap-3">
+                                    <span className="sc-f-sky transition-transform duration-300 group-hover:scale-125">
                                         <IconMail />
                                     </span>
                                     {CONTACT.email}
                                 </a>
                             </li>
                             <li>
-                                <a href={CONTACT.phoneHref} className="group flex items-center gap-3 hover:text-white transition-colors">
-                                    <span className="text-sky-400 transition-transform duration-300 group-hover:scale-125">
+                                <a href={CONTACT.phoneHref} className="group sc-f-link gap-3">
+                                    <span className="sc-f-sky transition-transform duration-300 group-hover:scale-125">
                                         <IconPhone />
                                     </span>
                                     {CONTACT.phone}
                                 </a>
                             </li>
-                            <li className="flex items-center gap-3 text-slate-400">
-                                <span className="text-sky-400">
+                            <li className="sc-f-muted flex items-center gap-3 min-h-[40px]">
+                                <span className="sc-f-sky">
                                     <IconClock />
                                 </span>
                                 {CONTACT.hours}
                             </li>
                         </ul>
-                        <button
-                            type="button"
-                            onClick={() => setSupport('contact')}
-                            className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-white bg-white/10 hover:bg-sky-500 px-4 py-2.5 rounded-xl transition duration-300 active:scale-95"
-                        >
+                        <button type="button" onClick={() => setSupport('contact')} className="sc-footer-btn mt-4">
                             Kirim Pesan
                             <IconArrow />
                         </button>
                     </Reveal>
                 </div>
 
-                <div className="border-t border-white/10 py-5 text-center text-xs text-slate-400">
+                <div className="sc-f-line sc-f-muted py-5 px-5 sm:px-6 text-center text-xs">
                     &copy; {new Date().getFullYear()} SmartCash. All rights reserved. Developed by Rashhff and FernCode.
                 </div>
             </footer>
@@ -1503,9 +1834,8 @@ export default function Welcome({ canLogin, canRegister, auth }) {
                 type="button"
                 onClick={(e) => scrollToSection(e, 'beranda')}
                 aria-label="Kembali ke atas"
-                className={`fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center transition duration-300 hover:bg-blue-700 hover:-translate-y-1 ${
-                    showTop ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
-                }`}
+                tabIndex={showTop ? 0 : -1}
+                className={`sc-btn sc-btn-primary sc-btn-round sc-top fixed bottom-[max(1.25rem,env(safe-area-inset-bottom))] right-5 sm:right-6 z-50 ${showTop ? '' : 'is-hidden'}`}
             >
                 <IconChevronUp />
             </button>
