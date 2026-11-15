@@ -429,7 +429,12 @@ const Dialog = ({ onClose, children }) => (
 /*  BAGIAN 1: PROFIL TOKO + BANNER DASHBOARD                           */
 /* ================================================================== */
 const isLinkValue = (s) => /^(https?:)?\/\//i.test(s) || s.startsWith('/') || s.startsWith('data:') || s.startsWith('blob:');
-const resolveBanner = (b) => (!b ? '' : isLinkValue(String(b)) ? String(b) : `/storage/${String(b).replace(/^\/+/, '')}`);
+const resolveBanner = (b) => {
+    if (!b) return '';
+    const value = String(b);
+    if (value.startsWith('vercel-blob:')) return value.slice('vercel-blob:'.length);
+    return isLinkValue(value) ? value : `/storage/${value.replace(/^\/+/, '')}`;
+};
 const MAX_BANNER_MB = 2;
 
 /* ------------------------------------------------------------------ */

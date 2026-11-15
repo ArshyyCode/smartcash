@@ -29,6 +29,7 @@ const rp = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
 const resolveBanner = (banner) => {
     if (!banner) return '';
     const b = String(banner);
+    if (b.startsWith('vercel-blob:')) return b.slice('vercel-blob:'.length);
     if (/^(https?:)?\/\//i.test(b) || b.startsWith('/') || b.startsWith('data:')) return b;
     return `/storage/${b.replace(/^\/+/, '')}`;
 };
