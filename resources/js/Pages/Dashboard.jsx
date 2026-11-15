@@ -7,10 +7,10 @@ import { Head, Link } from '@inertiajs/react';
 /* ================================================================== */
 const css = `
 @keyframes sc-rowin { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-@keyframes sc-pop { 0% { transform: scale(.7); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
+@keyframes sc-pop { 0% { transform: scale(.9); opacity: 0 } 100% { transform: none; opacity: 1 } }
 @keyframes sc-spin { to { transform: rotate(360deg) } }
 .sc-rowin { animation: sc-rowin .4s cubic-bezier(.22,1,.36,1) backwards }
-.sc-pop { animation: sc-pop .25s cubic-bezier(.22,1,.36,1) backwards }
+.sc-pop { animation: sc-pop .2s cubic-bezier(.22,1,.36,1) backwards }
 .sc-spin { animation: sc-spin .8s linear infinite }
 .sc-reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1) }
 .sc-reveal.sc-in { opacity: 1; transform: none }
@@ -40,6 +40,10 @@ const Reveal = ({ children, delay = 0, className = '' }) => {
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
+        if (typeof IntersectionObserver === 'undefined') {
+            setShown(true);
+            return;
+        }
         const io = new IntersectionObserver(
             ([entry]) => {
                 if (entry.isIntersecting) {
@@ -67,6 +71,10 @@ const CountUp = ({ to = 0, prefix = '', duration = 1100 }) => {
     useEffect(() => {
         const el = ref.current;
         if (!el) return;
+        if (typeof IntersectionObserver === 'undefined') {
+            setN(to);
+            return;
+        }
         const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const io = new IntersectionObserver(
             ([entry]) => {
@@ -225,40 +233,33 @@ const IconShield = ({ className = 'w-10 h-10' }) => (
         <path d="m8.8 12 2.2 2.2 4.2-4.4" />
     </svg>
 );
-const IconClock = ({ className = 'w-4 h-4' }) => (
-    <svg viewBox="0 0 24 24" className={className} {...ip}>
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 2" />
-    </svg>
-);
-
 /* ================================================================== */
 /*  KOMPONEN KECIL                                                     */
 /* ================================================================== */
 const Panel = ({ children, className = '' }) => (
-    <div className={`bg-white rounded-2xl border border-slate-200 p-6 ${className}`}>{children}</div>
+    <div className={`bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 ${className}`}>{children}</div>
 );
 
 const SectionTitle = ({ icon, children, right }) => (
-    <div className="flex items-center justify-between gap-3 mb-5">
-        <h3 className="flex items-center gap-2.5 text-[15px] font-bold text-slate-900">
+    <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <h2 className="flex items-center gap-2.5 text-base font-bold text-slate-900">
             <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">{icon}</span>
             {children}
-        </h3>
+        </h2>
         {right}
     </div>
 );
 
 const StatCard = ({ label, value, unit, icon }) => (
-    <div className="group h-full bg-white rounded-2xl border border-slate-200 p-5 flex items-center justify-between gap-3 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/70">
+    <div className="group h-full bg-white rounded-2xl border border-slate-200 p-5 flex items-center justify-between gap-3 transition duration-150 hover:border-blue-300 hover:shadow-md hover:shadow-slate-200/70">
         <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
-            <h3 className="text-2xl font-extrabold text-slate-900 mt-1.5 tracking-tight truncate">
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">{label}</p>
+            <p className="text-2xl font-extrabold text-slate-900 mt-1.5 tracking-tight truncate">
                 {value}
-                {unit && <span className="text-sm font-semibold text-slate-400 ml-1.5">{unit}</span>}
-            </h3>
+                {unit && <span className="text-sm font-semibold text-slate-500 ml-1.5">{unit}</span>}
+            </p>
         </div>
-        <div className="w-12 h-12 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center transition duration-200 group-hover:bg-blue-600 group-hover:text-white">
+        <div className="w-12 h-12 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center transition-colors duration-150 group-hover:bg-blue-600 group-hover:text-white">
             {icon}
         </div>
     </div>
@@ -267,16 +268,16 @@ const StatCard = ({ label, value, unit, icon }) => (
 const QuickAction = ({ href, icon, label, hint }) => (
     <Link
         href={href}
-        className="group flex items-center gap-3 bg-white rounded-2xl border border-slate-200 p-4 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/70 active:scale-[.98]"
+        className="group flex min-h-[64px] items-center gap-3 bg-white rounded-2xl border border-slate-200 p-4 transition duration-150 hover:border-blue-300 hover:shadow-md hover:shadow-slate-200/70 active:bg-slate-50"
     >
-        <span className="w-10 h-10 shrink-0 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center transition duration-200 group-hover:bg-blue-600 group-hover:text-white">
+        <span className="w-10 h-10 shrink-0 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center transition-colors duration-150 group-hover:bg-blue-600 group-hover:text-white">
             {icon}
         </span>
         <span className="min-w-0 flex-1">
             <span className="block text-[13px] font-bold text-slate-800 truncate">{label}</span>
-            <span className="block text-[11px] text-slate-400 truncate">{hint}</span>
+            <span className="block text-xs text-slate-500 truncate">{hint}</span>
         </span>
-        <span className="text-slate-300 transition duration-200 group-hover:text-blue-600 group-hover:translate-x-0.5">
+        <span className="text-slate-500 transition-colors duration-150 group-hover:text-blue-600">
             <IconArrow className="w-4 h-4" />
         </span>
     </Link>
@@ -308,7 +309,7 @@ const TrendChart = ({ items }) => {
                 <span className="text-slate-300">
                     <IconChart className="w-10 h-10" />
                 </span>
-                <p className="text-xs text-slate-400 mt-2">Grafik akan muncul setelah ada transaksi.</p>
+                <p className="text-xs text-slate-500 mt-2">Grafik akan muncul setelah ada transaksi.</p>
             </div>
         );
     }
@@ -325,14 +326,14 @@ const TrendChart = ({ items }) => {
                 {active ? (
                     <div key={active.id} className="sc-pop">
                         <p className="text-xl font-extrabold text-blue-600 tracking-tight">{rp(active.value)}</p>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-xs text-slate-500">
                             #{active.id} &middot; {active.cashier} &middot; {new Date(active.time).toLocaleString('id-ID')}
                         </p>
                     </div>
                 ) : (
                     <div>
                         <p className="text-xl font-extrabold text-slate-900 tracking-tight">{rp(total)}</p>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-xs text-slate-500">
                             dari {data.length} transaksi terakhir &middot; rata-rata {rp(avg)}
                         </p>
                     </div>
@@ -352,8 +353,10 @@ const TrendChart = ({ items }) => {
                             onMouseEnter={() => setHover(i)}
                             onFocus={() => setHover(i)}
                             onBlur={() => setHover(null)}
+                            onClick={() => setHover((h) => (h === i ? null : i))}
+                            aria-pressed={hover === i}
                             aria-label={`Transaksi ${d.id}: ${rp(d.value)}`}
-                            className="flex-1 h-full flex items-end focus:outline-none"
+                            className="flex-1 h-full flex items-end rounded-t-md"
                         >
                             <span
                                 className={`block w-full rounded-t-md transition-all duration-700 ease-out ${
@@ -367,7 +370,7 @@ const TrendChart = ({ items }) => {
             </div>
             <div className="flex gap-2 mt-2">
                 {data.map((d) => (
-                    <span key={d.id} className="flex-1 text-center text-[10px] text-slate-400 truncate">
+                    <span key={d.id} className="flex-1 text-center text-[11px] text-slate-500 truncate">
                         #{d.id}
                     </span>
                 ))}
@@ -401,8 +404,6 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
 
     const hour = now.getHours();
     const greeting = hour < 11 ? 'Selamat pagi' : hour < 15 ? 'Selamat siang' : hour < 18 ? 'Selamat sore' : 'Selamat malam';
-    const dateText = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    const timeText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }).replace('.', ':');
 
     const totalSales = Number(stats?.totalSales || 0);
     const totalTransactions = Number(stats?.totalTransactions || 0);
@@ -449,7 +450,7 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
             user={auth.user}
             header={
                 <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center" aria-hidden="true">
                         <IconStore />
                     </span>
                     <h2 className="font-extrabold text-xl text-slate-900 tracking-tight leading-tight">
@@ -478,37 +479,35 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                             </>
                         )}
 
-                        <div className="relative">
-                            <span className="inline-flex items-center gap-2 bg-white/15 text-[11px] font-semibold px-3 py-1.5 rounded-full">
-                                <IconClock className="w-3.5 h-3.5" />
-                                {dateText} &middot; {timeText}
-                            </span>
-                            <h1 className="text-2xl sm:text-3xl font-extrabold mt-3 tracking-tight">
-                                {greeting}, selamat datang di {store?.name || 'Toko Anda'}
+                        <div className="relative min-w-0">
+                            {/* hanya tiga lapis: sapaan, nama toko, kontak (tanggal & jam sudah ada di header atas) */}
+                            <h1 className="tracking-tight">
+                                <span className="block text-base sm:text-lg font-semibold text-blue-100">{greeting}, selamat datang di</span>
+                                <span className="block mt-1 text-2xl sm:text-3xl font-extrabold leading-tight break-words">{store?.name || 'Toko Anda'}</span>
                             </h1>
                             {store?.address || store?.phone ? (
-                                <div className="mt-3 space-y-1.5 text-sm text-blue-100 max-w-2xl">
+                                <ul className="mt-4 flex flex-wrap items-start gap-x-6 gap-y-2 text-sm text-blue-100 max-w-2xl">
                                     {store?.address && (
-                                        <p className="flex items-start gap-2 leading-relaxed">
+                                        <li className="flex items-start gap-2 leading-relaxed">
                                             <span className="mt-0.5 shrink-0 opacity-90">
                                                 <IconPin />
                                             </span>
                                             <span className="whitespace-pre-line break-words">{store.address}</span>
-                                        </p>
+                                        </li>
                                     )}
                                     {store?.phone && (
-                                        <p className="flex items-center gap-2">
-                                            <span className="shrink-0 opacity-90">
+                                        <li className="flex items-start gap-2 leading-relaxed">
+                                            <span className="mt-0.5 shrink-0 opacity-90">
                                                 <IconPhone />
                                             </span>
                                             <span>{store.phone}</span>
-                                        </p>
+                                        </li>
                                     )}
-                                </div>
+                                </ul>
                             ) : isAdmin ? (
                                 <Link
                                     href={route('settings.index', { tab: 'store' })}
-                                    className="inline-block mt-3 text-xs font-semibold text-blue-100 underline-offset-2 hover:underline hover:text-white transition-colors"
+                                    className="mt-2 inline-flex min-h-[44px] items-center text-xs font-semibold text-blue-100 underline-offset-2 hover:underline hover:text-white transition-colors"
                                 >
                                     Lengkapi alamat dan nomor telepon toko di Pengaturan
                                 </Link>
@@ -522,13 +521,13 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                         >
                             <span className="text-xs text-blue-100 font-medium">Kode Unik Toko</span>
                             <div className="flex items-center gap-3 mt-1.5">
-                                <span className="text-2xl font-black tracking-widest text-white">{currentCode || '-'}</span>
+                                <span className="text-xl sm:text-2xl font-black tracking-widest text-white break-all">{currentCode || '-'}</span>
                                 <button
                                     type="button"
                                     onClick={copyToClipboard}
                                     disabled={!currentCode}
                                     aria-label="Salin kode toko"
-                                    className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg transition duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none ${
+                                    className={`inline-flex items-center gap-1.5 min-h-[44px] text-xs font-bold px-4 rounded-xl transition-colors duration-150 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed ${
                                         copied ? 'bg-emerald-500 text-white' : 'bg-white text-blue-700 hover:bg-blue-50'
                                     }`}
                                 >
@@ -537,11 +536,14 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                     </span>
                                     {copied ? 'Tersalin' : 'Salin'}
                                 </button>
+                                <span className="sr-only" role="status">
+                                    {copied ? 'Kode toko tersalin' : ''}
+                                </span>
                             </div>
                             {isAdmin && (
                                 <Link
                                     href={route('settings.index', { tab: 'code' })}
-                                    className="mt-2.5 text-[11px] font-semibold text-blue-100 hover:text-white underline-offset-2 hover:underline transition-colors"
+                                    className="mt-1 inline-flex min-h-[44px] items-center text-xs font-semibold text-blue-100 hover:text-white underline-offset-2 hover:underline transition-colors"
                                 >
                                     Ubah kode toko
                                 </Link>
@@ -550,14 +552,16 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                     </div>
                 </Reveal>
 
-                {/* ===================== AKSI CEPAT ===================== */}
-                <Reveal delay={60}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                        {quickActions.map((a) => (
-                            <QuickAction key={a.label} href={a.href} icon={a.icon} label={a.label} hint={a.hint} />
-                        ))}
-                    </div>
-                </Reveal>
+                {/* ===================== AKSI CEPAT (khusus Admin) ===================== */}
+                {isAdmin && (
+                    <Reveal delay={60}>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {quickActions.map((a) => (
+                                <QuickAction key={a.label} href={a.href} icon={a.icon} label={a.label} hint={a.hint} />
+                            ))}
+                        </div>
+                    </Reveal>
+                )}
 
                 {/* ===================== STATISTIK ===================== */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -593,22 +597,22 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                     {cashiers.map((c, i) => (
                                         <div key={c.name} style={{ animationDelay: `${i * 60}ms` }} className="sc-rowin group">
                                             <div className="flex items-center gap-3">
-                                                <span className="w-9 h-9 shrink-0 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+                                                <span className="w-9 h-9 shrink-0 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center ">
                                                     {c.name.charAt(0).toUpperCase()}
                                                 </span>
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center justify-between gap-2">
-                                                        <p className="text-xs font-bold text-slate-800 truncate">
+                                                        <p className="text-[13px] font-bold text-slate-800 truncate">
                                                             {i === 0 && cashiers.length > 1 && (
-                                                                <span className="mr-1.5 text-[9px] font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                                                                <span className="mr-1.5 text-xs font-bold uppercase bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
                                                                     Teratas
                                                                 </span>
                                                             )}
                                                             {c.name}
                                                         </p>
-                                                        <span className="text-[11px] font-bold text-slate-700 shrink-0">{rp(c.total)}</span>
+                                                        <span className="text-xs font-bold text-slate-700 shrink-0">{rp(c.total)}</span>
                                                     </div>
-                                                    <p className="text-[10px] text-slate-400">{c.count} transaksi</p>
+                                                    <p className="text-[11px] text-slate-500">{c.count} transaksi</p>
                                                 </div>
                                             </div>
                                             <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -619,14 +623,14 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                             </div>
                                         </div>
                                     ))}
-                                    <p className="text-[10px] text-slate-400 pt-1">Dihitung dari {recentTransactions.length} transaksi terbaru.</p>
+                                    <p className="text-[11px] text-slate-500 pt-1">Dihitung dari {recentTransactions.length} transaksi terbaru.</p>
                                 </div>
                             ) : (
                                 <div className="text-center py-10">
                                     <span className="text-slate-300 inline-block">
                                         <IconUsers className="w-10 h-10" />
                                     </span>
-                                    <p className="text-xs text-slate-400 mt-2">Belum ada aktivitas kasir.</p>
+                                    <p className="text-xs text-slate-500 mt-2">Belum ada aktivitas kasir.</p>
                                 </div>
                             )}
                         </Panel>
@@ -641,8 +645,8 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                 icon={<IconList />}
                                 right={
                                     recentTransactions.length > 0 && (
-                                        <div className="relative w-40 sm:w-52">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <div className="relative w-full sm:w-56">
+                                            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">
                                                 <IconSearch />
                                             </span>
                                             <input
@@ -650,7 +654,9 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                                 value={trxSearch}
                                                 onChange={(e) => setTrxSearch(e.target.value)}
                                                 placeholder="Cari ID / kasir"
-                                                className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border-slate-200 bg-slate-50 placeholder:text-slate-400 transition hover:border-blue-300 focus:bg-[rgb(var(--surface))] focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                                aria-label="Cari transaksi berdasarkan ID atau kasir"
+                                                autoComplete="off"
+                                                className="w-full min-h-[44px] pl-9 pr-3 text-base sm:text-sm rounded-xl border-slate-200 bg-slate-50 placeholder:text-slate-500 transition hover:border-blue-300 focus:bg-[rgb(var(--surface))] focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                                             />
                                         </div>
                                     )
@@ -661,11 +667,12 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
 
                             <div className="overflow-x-auto">
                                 <table className="min-w-full">
+                                    <caption className="sr-only">Transaksi terbaru beserta kasir dan total bayar</caption>
                                     <thead>
-                                        <tr className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-                                            <th className="px-3 py-2">ID / Waktu</th>
-                                            <th className="px-3 py-2">Kasir</th>
-                                            <th className="px-3 py-2 text-right">Total Bayar</th>
+                                        <tr className="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                                            <th scope="col" className="px-3 py-2">ID / Waktu</th>
+                                            <th scope="col" className="px-3 py-2">Kasir</th>
+                                            <th scope="col" className="px-3 py-2 text-right">Total Bayar</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -674,18 +681,18 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                                 <tr
                                                     key={trx.id}
                                                     style={{ animationDelay: `${i * 40}ms` }}
-                                                    className="sc-rowin group text-xs border-t border-slate-100 transition-colors duration-150 hover:bg-slate-50"
+                                                    className="sc-rowin group text-[13px] border-t border-slate-100 transition-colors duration-150 hover:bg-slate-50"
                                                 >
                                                     <td className="px-3 py-3 font-semibold text-slate-900">
                                                         #{trx.id}
                                                         <br />
-                                                        <span className="text-[10px] text-slate-400 font-normal">
+                                                        <span className="text-[11px] text-slate-500 font-normal">
                                                             {new Date(trx.created_at).toLocaleString('id-ID')}
                                                         </span>
                                                     </td>
                                                     <td className="px-3 py-3 text-slate-600">
                                                         <span className="inline-flex items-center gap-2">
-                                                            <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center">
+                                                            <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
                                                                 {(trx.user?.name || 'K').charAt(0).toUpperCase()}
                                                             </span>
                                                             {trx.user?.name || 'Kasir'}
@@ -700,7 +707,7 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                                     <span className="text-slate-300 inline-block">
                                                         <IconInbox />
                                                     </span>
-                                                    <p className="text-slate-400 text-xs mt-2">
+                                                    <p className="text-slate-500 text-xs mt-2">
                                                         {recentTransactions.length === 0 ? 'Belum ada transaksi tercatat.' : 'Tidak ada transaksi yang cocok.'}
                                                     </p>
                                                 </td>
@@ -718,7 +725,7 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                 icon={<IconAlert />}
                                 right={
                                     lowStockProducts.length > 0 && (
-                                        <span className="text-[11px] font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full">
+                                        <span className="text-xs font-semibold text-red-600 bg-red-50 px-2.5 py-1 rounded-full">
                                             {lowStockProducts.length} produk
                                         </span>
                                     )
@@ -740,8 +747,8 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                             >
                                                 <div className="flex justify-between items-center gap-3">
                                                     <div className="min-w-0">
-                                                        <h4 className="font-bold text-xs text-slate-800 truncate">{prod.name}</h4>
-                                                        <span className="inline-block mt-1 text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-semibold">
+                                                        <h3 className="font-bold text-[13px] text-slate-800 truncate">{prod.name}</h3>
+                                                        <span className="inline-block mt-1 text-[11px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-semibold">
                                                             {prod.code}
                                                         </span>
                                                     </div>
@@ -751,6 +758,7 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                                         }`}
                                                     >
                                                         Sisa: {prod.stock}
+                                                        {critical && <span className="font-semibold"> &middot; Kritis</span>}
                                                     </span>
                                                 </div>
                                                 <div className="mt-2 h-1.5 rounded-full bg-slate-100 overflow-hidden">
@@ -767,7 +775,7 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                                         <span className="text-emerald-300 inline-block">
                                             <IconShield />
                                         </span>
-                                        <p className="text-slate-400 text-xs mt-2">Aman! Belum ada produk dengan stok menipis.</p>
+                                        <p className="text-slate-500 text-xs mt-2">Aman! Belum ada produk dengan stok menipis.</p>
                                     </div>
                                 )}
                             </div>
@@ -775,7 +783,7 @@ export default function Dashboard({ auth, store, stats, recentTransactions = [],
                             {isAdmin && lowStockProducts.length > 0 && (
                                 <Link
                                     href={route('purchases.index')}
-                                    className="mt-4 flex items-center justify-center gap-2 text-xs font-bold text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded-xl py-2.5 transition duration-200 active:scale-[.98]"
+                                    className="mt-4 flex min-h-[44px] items-center justify-center gap-2 text-xs font-bold text-blue-600 border border-blue-200 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded-xl transition-colors duration-150 active:brightness-90"
                                 >
                                     <IconDownload className="w-4 h-4" />
                                     Restock sekarang

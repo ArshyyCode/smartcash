@@ -1,32 +1,36 @@
 import React, { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DialogShell from '@/Components/DialogShell';
+import Toast from '@/Components/Toast';
 import { Head, useForm, router, usePage } from '@inertiajs/react';
+
+/* ================================================================== */
+/*  Kelola Produk & Kategori                                           */
+/*  Letakkan di: resources/js/Pages/Products/Index.jsx                 */
+/*  Membutuhkan: Components/DialogShell.jsx dan Components/Toast.jsx   */
+/* ================================================================== */
 
 /* ================================================================== */
 /*  CSS (animasi ringan, selaras dengan Dashboard & POS)               */
 /* ================================================================== */
 const css = `
 @keyframes sc-rowin { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-@keyframes sc-pop { 0% { transform: scale(.94); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
-@keyframes sc-toast { from { opacity: 0; transform: translateY(-12px) scale(.96) } to { opacity: 1; transform: none } }
-@keyframes sc-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sc-pop { 0% { transform: scale(.96); opacity: 0 } 100% { transform: none; opacity: 1 } }
 @keyframes sc-spin { to { transform: rotate(360deg) } }
-.sc-rowin { animation: sc-rowin .35s cubic-bezier(.22,1,.36,1) backwards }
+.sc-rowin { animation: sc-rowin .3s cubic-bezier(.22,1,.36,1) backwards }
 .sc-pop { animation: sc-pop .2s cubic-bezier(.22,1,.36,1) backwards }
-.sc-toast { animation: sc-toast .3s cubic-bezier(.22,1,.36,1) backwards }
-.sc-fade { animation: sc-fade .2s ease backwards }
 .sc-spin { animation: sc-spin .8s linear infinite }
 .sc-noscroll::-webkit-scrollbar { display: none }
 .sc-noscroll { scrollbar-width: none }
 @media (prefers-reduced-motion: reduce) {
-    .sc-rowin, .sc-pop, .sc-toast, .sc-fade { animation: none !important }
+    .sc-rowin, .sc-pop { animation: none !important }
 }
 `;
 
 /* ================================================================== */
 /*  IKON                                                               */
 /* ================================================================== */
-const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
 
 const IconBox = ({ className = 'w-5 h-5' }) => (
     <svg viewBox="0 0 24 24" className={className} {...ip}>
@@ -94,35 +98,49 @@ const IconImage = ({ className = 'w-8 h-8' }) => (
 /* ================================================================== */
 /*  KOMPONEN KECIL                                                     */
 /* ================================================================== */
+const rp = (n) => `Rp ${Number(n || 0).toLocaleString('id-ID')}`;
+
 const inputCls =
-    'w-full text-xs rounded-xl border-slate-200 bg-white placeholder:text-slate-400 transition duration-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
+    'w-full min-h-[44px] text-base sm:text-sm rounded-xl border-slate-200 bg-white placeholder:text-slate-400 transition duration-150 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
+
+const btnPrimary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl bg-blue-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-blue-700 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600';
+const btnSecondary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold transition-colors duration-150 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50';
 
 const Panel = ({ children, className = '' }) => (
     <div className={`bg-white rounded-2xl border border-slate-200 ${className}`}>{children}</div>
 );
 
-const Field = ({ label, error, children }) => (
+const Field = ({ id, label, error, hint, children }) => (
     <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-1.5">{label}</label>
+        <label htmlFor={id} className="block text-sm font-semibold text-slate-700 mb-1.5">
+            {label}
+        </label>
         {children}
-        {error && <p className="sc-pop text-red-500 text-[11px] font-semibold mt-1">{error}</p>}
+        {hint && !error && <p className="text-xs text-slate-500 mt-1.5">{hint}</p>}
+        {error && (
+            <p id={`${id}-error`} role="alert" className="sc-pop text-red-600 text-xs font-semibold mt-1.5">
+                {error}
+            </p>
+        )}
     </div>
 );
 
 const Spinner = () => (
-    <svg viewBox="0 0 24 24" className="sc-spin w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className="sc-spin w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
         <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
 );
 
 /* Foto produk dari link, dengan cadangan huruf awal bila gagal dimuat */
-const Thumb = ({ src, name, className = 'w-11 h-11' }) => {
+const Thumb = ({ src, name, className = 'w-12 h-12' }) => {
     const [failed, setFailed] = useState(false);
     useEffect(() => setFailed(false), [src]);
 
     if (!src || failed) {
         return (
-            <div className={`${className} shrink-0 rounded-xl bg-blue-50 text-blue-500 font-extrabold text-sm flex items-center justify-center`}>
+            <div className={`${className} shrink-0 rounded-xl bg-blue-50 text-blue-600 font-extrabold text-sm flex items-center justify-center`} aria-hidden="true">
                 {(name || '?').charAt(0).toUpperCase()}
             </div>
         );
@@ -130,30 +148,70 @@ const Thumb = ({ src, name, className = 'w-11 h-11' }) => {
     return (
         <img
             src={src}
-            alt={name}
+            alt=""
             loading="lazy"
+            decoding="async"
             onError={() => setFailed(true)}
             className={`${className} shrink-0 rounded-xl object-cover border border-slate-200`}
         />
     );
 };
 
-const StatChip = ({ icon, label, value, tone = 'blue' }) => {
+/* Ringkasan: satu panel, tiga kolom (lebih ringan daripada tiga kotak terpisah) */
+const SummaryStrip = ({ items }) => {
     const tones = {
         blue: 'bg-blue-50 text-blue-600',
         amber: 'bg-amber-50 text-amber-600',
         slate: 'bg-slate-100 text-slate-600',
     };
     return (
-        <div className="flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5">
-            <span className={`w-10 h-10 rounded-xl flex items-center justify-center ${tones[tone]}`}>{icon}</span>
-            <div>
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
-                <p className="text-lg font-extrabold text-slate-900 leading-tight">{value}</p>
-            </div>
-        </div>
+        <Panel className="grid grid-cols-1 sm:grid-cols-3 divide-y divide-slate-200 sm:divide-y-0 sm:divide-x">
+            {items.map((it) => (
+                <div key={it.label} className="flex items-center gap-3.5 p-4 sm:p-5">
+                    <span className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${tones[it.tone || 'blue']}`}>{it.icon}</span>
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-600">{it.label}</p>
+                        <p className="text-xl font-extrabold text-slate-900 leading-tight">{it.value}</p>
+                    </div>
+                </div>
+            ))}
+        </Panel>
     );
 };
+
+/* Lencana stok: warna DAN tulisan (habis / kritis / menipis) */
+const StockBadge = ({ stock }) => {
+    const n = Number(stock);
+    const state =
+        n <= 0
+            ? { cls: 'bg-red-100 text-red-700', text: 'Habis' }
+            : n <= 5
+            ? { cls: 'bg-red-100 text-red-700', text: `Kritis: ${n}` }
+            : n <= 10
+            ? { cls: 'bg-amber-100 text-amber-800', text: `Menipis: ${n}` }
+            : { cls: 'bg-emerald-100 text-emerald-700', text: `Stok: ${n}` };
+    return <span className={`inline-block whitespace-nowrap px-2.5 py-1 rounded-full text-xs font-bold ${state.cls}`}>{state.text}</span>;
+};
+
+/* Tombol aksi berupa ikon (44 px), nama tetap terbaca lewat aria-label */
+const RowAction = ({ label, onClick, tone = 'default', disabled = false, title, children }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={title || label}
+        aria-disabled={disabled || undefined}
+        className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center transition-colors duration-150 ${
+            disabled
+                ? 'text-slate-300 cursor-not-allowed'
+                : tone === 'danger'
+                ? 'text-slate-600 hover:bg-red-50 hover:text-red-600 active:bg-red-100'
+                : 'text-slate-600 hover:bg-blue-50 hover:text-blue-600 active:bg-blue-100'
+        }`}
+    >
+        {children}
+    </button>
+);
 
 /* ================================================================== */
 /*  HALAMAN KELOLA PRODUK                                              */
@@ -179,27 +237,10 @@ export default function Index({ auth, products = [], categories = [], suppliers 
 
     const showToast = (type, message) => setToast({ type, message, id: Date.now() });
 
-    useEffect(() => {
-        if (!toast) return;
-        const t = setTimeout(() => setToast(null), 3200);
-        return () => clearTimeout(t);
-    }, [toast]);
-
     // tampilkan pesan sukses dari backend (back()->with('success', ...)) bila dibagikan via Inertia
     useEffect(() => {
         if (flash?.success) showToast('success', flash.success);
     }, [flash?.success]);
-
-    // tutup modal / dialog dengan tombol Esc
-    useEffect(() => {
-        const onKey = (e) => {
-            if (e.key !== 'Escape') return;
-            setConfirmState(null);
-            setIsModalOpen(false);
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, []);
 
     // Form Hook untuk Produk
     const {
@@ -344,13 +385,15 @@ export default function Index({ auth, products = [], categories = [], suppliers 
 
     const lowStockCount = products.filter((p) => Number(p.stock) <= 10).length;
     const imagePreview = /^https?:\/\//i.test(prodData.image || '') ? prodData.image : '';
+    const filtersActive = Boolean(searchQuery) || selectedCategory !== 'all';
+    const countFor = (value) => products.filter((p) => String(p.category_id) === String(value)).length;
 
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
                 <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center" aria-hidden="true">
                         <IconBox />
                     </span>
                     <h2 className="font-extrabold text-xl text-slate-900 tracking-tight leading-tight truncate">
@@ -362,142 +405,136 @@ export default function Index({ auth, products = [], categories = [], suppliers 
             <Head title="Kelola Produk" />
             <style>{css}</style>
 
-            {/* TOAST */}
-            {toast && (
-                <div className="fixed top-20 right-4 sm:right-6 z-[60]">
-                    <div
-                        key={toast.id}
-                        className={`sc-toast flex items-start gap-3 max-w-sm rounded-2xl px-4 py-3 border text-sm font-semibold ${
-                            toast.type === 'success'
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                : 'bg-red-50 border-red-200 text-red-800'
-                        }`}
-                    >
-                        <span
-                            className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-white ${
-                                toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
-                            }`}
-                        >
-                            {toast.type === 'success' ? <IconCheck /> : <IconClose className="w-3 h-3" />}
-                        </span>
-                        <span className="leading-snug">{toast.message}</span>
-                        <button type="button" onClick={() => setToast(null)} aria-label="Tutup" className="ml-1 opacity-60 hover:opacity-100 transition">
-                            <IconClose className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <Toast toast={toast} onClose={() => setToast(null)} />
 
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-5">
                 {/* RINGKASAN */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatChip icon={<IconBox />} label="Total Produk" value={products.length} />
-                    <StatChip icon={<IconAlert />} label="Stok Menipis (≤ 10)" value={lowStockCount} tone="amber" />
-                    <StatChip icon={<IconLayers />} label="Kategori" value={categories.length} tone="slate" />
-                </div>
+                <SummaryStrip
+                    items={[
+                        { icon: <IconBox />, label: 'Total produk', value: products.length },
+                        { icon: <IconAlert />, label: 'Stok menipis (10 atau kurang)', value: lowStockCount, tone: 'amber' },
+                        { icon: <IconLayers />, label: 'Kategori', value: categories.length, tone: 'slate' },
+                    ]}
+                />
 
-                {/* TOOLBAR: JUDUL, PENCARIAN, AKSI */}
-                <Panel className="p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                    <div>
-                        <h3 className="text-base font-bold text-slate-900">Daftar Produk &amp; Inventaris</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Kelola produk dan filter berdasarkan kategori dengan mudah.</p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                        <div className="relative flex-1 lg:w-64 min-w-[200px]">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                {/* PENCARIAN, AKSI, DAN FILTER KATEGORI */}
+                <Panel className="p-4 sm:p-5 space-y-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                        <div className="relative flex-1">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
                                 <IconSearch />
                             </span>
                             <input
                                 type="text"
+                                inputMode="search"
+                                autoComplete="off"
+                                aria-label="Cari produk berdasarkan nama atau kode"
                                 placeholder="Cari nama atau kode produk..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className={`${inputCls} pl-9 pr-9 py-2.5`}
+                                className={`${inputCls} pl-10 pr-12`}
                             />
                             {searchQuery && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSearchQuery('')}
-                                    aria-label="Hapus pencarian"
-                                    className="sc-pop absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition active:scale-90"
-                                >
-                                    <IconClose className="w-3 h-3" />
-                                </button>
+                                <span className="absolute right-1 top-1/2 -translate-y-1/2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setSearchQuery('')}
+                                        aria-label="Hapus pencarian"
+                                        className="sc-pop w-10 h-10 rounded-xl text-slate-500 hover:bg-red-100 hover:text-red-600 active:bg-red-200 flex items-center justify-center transition-colors duration-150"
+                                    >
+                                        <IconClose />
+                                    </button>
+                                </span>
                             )}
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => setIsCategoryPanelOpen(!isCategoryPanelOpen)}
-                            aria-expanded={isCategoryPanelOpen}
-                            className={`inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl border transition duration-200 hover:-translate-y-0.5 active:scale-95 ${
-                                isCategoryPanelOpen
-                                    ? 'bg-slate-800 border-slate-800 text-white'
-                                    : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-600'
-                            }`}
-                        >
-                            <IconFolder />
-                            {isCategoryPanelOpen ? 'Tutup Panel Kategori' : 'Kelola Kategori'}
-                        </button>
+                        <div className="flex flex-col sm:flex-row gap-2 shrink-0">
+                            <button
+                                type="button"
+                                onClick={() => setIsCategoryPanelOpen(!isCategoryPanelOpen)}
+                                aria-expanded={isCategoryPanelOpen}
+                                aria-controls="panel-kategori"
+                                className={`${btnSecondary} ${isCategoryPanelOpen ? '!border-blue-300 !bg-blue-50 !text-blue-700' : ''}`}
+                            >
+                                <IconFolder />
+                                Kelola Kategori
+                            </button>
+                            <button type="button" onClick={openCreateModal} className={btnPrimary}>
+                                <IconPlus />
+                                Tambah Produk
+                            </button>
+                        </div>
+                    </div>
 
-                        <button
-                            type="button"
-                            onClick={openCreateModal}
-                            className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition duration-200 hover:-translate-y-0.5 active:scale-95"
-                        >
-                            <IconPlus />
-                            Tambah Produk
-                        </button>
+                    <div role="group" aria-label="Filter kategori" className="sc-noscroll flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+                        {[
+                            { id: 'all', name: 'Semua', count: products.length },
+                            ...categories.map((c) => ({ ...c, count: countFor(c.id) })),
+                        ].map((cat) => {
+                            const active = String(selectedCategory) === String(cat.id);
+                            return (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => setSelectedCategory(String(cat.id))}
+                                    aria-pressed={active}
+                                    className={`shrink-0 inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors duration-150 ${
+                                        active
+                                            ? 'bg-blue-600 border-blue-600 text-white active:brightness-90'
+                                            : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50'
+                                    }`}
+                                >
+                                    {cat.name}
+                                    <span className={`text-xs font-bold px-1.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                        {cat.count}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </Panel>
 
                 {/* ================= PANEL KATEGORI ================= */}
                 {isCategoryPanelOpen && (
-                    <Panel className="sc-pop p-5">
-                        <div className="flex justify-between items-start gap-3 border-b border-slate-100 pb-4 mb-5">
-                            <div>
-                                <h4 className="font-bold text-slate-900 text-sm">Pengaturan Kategori Produk</h4>
-                                <p className="text-[11px] text-slate-500 mt-0.5">
-                                    Tambah, ubah, atau hapus kategori. Kategori yang masih berisi produk tidak bisa dihapus.
-                                </p>
+                    <Panel className="sc-pop p-4 sm:p-5" >
+                        <div id="panel-kategori" role="region" aria-labelledby="judul-panel-kategori">
+                            <div className="flex justify-between items-start gap-3 mb-5">
+                                <div>
+                                    <h3 id="judul-panel-kategori" className="font-bold text-slate-900 text-base">
+                                        Pengaturan Kategori
+                                    </h3>
+                                    <p className="text-sm text-slate-600 mt-0.5">Kategori yang masih berisi produk tidak bisa dihapus.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCategoryPanelOpen(false)}
+                                    aria-label="Tutup panel kategori"
+                                    className="w-11 h-11 -mt-1 -mr-2 shrink-0 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:bg-slate-200 flex items-center justify-center transition-colors duration-150"
+                                >
+                                    <IconClose />
+                                </button>
                             </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsCategoryPanelOpen(false)}
-                                aria-label="Tutup panel kategori"
-                                className="w-8 h-8 shrink-0 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition active:scale-90"
-                            >
-                                <IconClose />
-                            </button>
-                        </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                            {/* Form tambah/edit kategori */}
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 h-fit">
-                                <h5 className="font-bold text-xs text-slate-800 mb-3">
-                                    {editCategory ? `Edit Kategori: ${editCategory.name}` : 'Tambah Kategori Baru'}
-                                </h5>
-                                <form onSubmit={handleCategorySubmit} className="space-y-3">
-                                    <Field label="Nama Kategori" error={catErrors.name}>
+                            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)] gap-6">
+                                {/* Form tambah/edit kategori */}
+                                <form onSubmit={handleCategorySubmit} className="space-y-3 h-fit">
+                                    <Field id="cat-name" label={editCategory ? `Ubah nama: ${editCategory.name}` : 'Tambah kategori baru'} error={catErrors.name}>
                                         <input
+                                            id="cat-name"
                                             type="text"
                                             value={catData.name}
                                             onChange={(e) => setCatData('name', e.target.value)}
                                             placeholder="Contoh: Makanan, Minuman"
-                                            className={`${inputCls} py-2.5`}
+                                            aria-invalid={Boolean(catErrors.name)}
+                                            aria-describedby={catErrors.name ? 'cat-name-error' : undefined}
+                                            className={inputCls}
                                             required
                                         />
                                     </Field>
-
                                     <div className="flex items-center gap-2">
-                                        <button
-                                            type="submit"
-                                            disabled={catProcessing}
-                                            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                                        >
+                                        <button type="submit" disabled={catProcessing} className={btnPrimary}>
                                             {catProcessing && <Spinner />}
-                                            {editCategory ? 'Simpan Perubahan' : 'Tambah Kategori'}
+                                            {editCategory ? 'Simpan' : 'Tambah'}
                                         </button>
                                         {editCategory && (
                                             <button
@@ -507,261 +544,248 @@ export default function Index({ auth, products = [], categories = [], suppliers 
                                                     resetCat('name');
                                                     clearCatErrors();
                                                 }}
-                                                className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl transition active:scale-95"
+                                                className={btnSecondary}
                                             >
                                                 Batal
                                             </button>
                                         )}
                                     </div>
                                 </form>
-                            </div>
 
-                            {/* Daftar kategori */}
-                            <div className="lg:col-span-2 overflow-auto max-h-64 border border-slate-200 rounded-xl">
-                                <table className="w-full text-left text-xs">
-                                    <thead className="bg-slate-50 text-slate-500 uppercase text-[11px] sticky top-0">
-                                        <tr>
-                                            <th className="px-4 py-3 font-semibold">Nama Kategori</th>
-                                            <th className="px-4 py-3 font-semibold">Jumlah Produk</th>
-                                            <th className="px-4 py-3 font-semibold text-center">Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {categories.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="3" className="p-8 text-center text-slate-400">
-                                                    Belum ada kategori tersimpan.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            categories.map((cat, i) => {
-                                                const productCount = products.filter((p) => String(p.category_id) === String(cat.id)).length;
+                                {/* Daftar kategori */}
+                                <div className="rounded-xl border border-slate-200 max-h-72 overflow-y-auto">
+                                    {categories.length === 0 ? (
+                                        <p className="p-8 text-center text-sm text-slate-600">Belum ada kategori tersimpan.</p>
+                                    ) : (
+                                        <ul className="divide-y divide-slate-100">
+                                            {categories.map((cat, i) => {
+                                                const productCount = countFor(cat.id);
                                                 return (
-                                                    <tr
+                                                    <li
                                                         key={cat.id}
                                                         style={{ animationDelay: `${i * 30}ms` }}
-                                                        className="sc-rowin border-t border-slate-100 transition-colors hover:bg-slate-50"
+                                                        className="sc-rowin flex items-center gap-3 pl-4 pr-2 py-1.5 hover:bg-slate-50 transition-colors duration-150"
                                                     >
-                                                        <td className="px-4 py-3 font-semibold text-slate-800">{cat.name}</td>
-                                                        <td className="px-4 py-3">
-                                                            <span className="bg-blue-50 text-blue-700 font-bold px-2.5 py-0.5 rounded-full">
-                                                                {productCount} produk
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3">
-                                                            <div className="flex items-center justify-center gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleEditCategory(cat)}
-                                                                    className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-blue-600 hover:border-blue-600 hover:text-white transition active:scale-95"
-                                                                >
-                                                                    <IconEdit />
-                                                                    Edit
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleDeleteCategory(cat)}
-                                                                    title={productCount > 0 ? 'Masih ada produk di kategori ini' : 'Hapus kategori'}
-                                                                    className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1.5 rounded-lg border transition active:scale-95 ${
-                                                                        productCount > 0
-                                                                            ? 'border-slate-200 text-slate-300 cursor-not-allowed'
-                                                                            : 'border-red-200 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white'
-                                                                    }`}
-                                                                >
-                                                                    <IconTrash />
-                                                                    Hapus
-                                                                </button>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
+                                                        <span className="flex-1 min-w-0 font-semibold text-sm text-slate-800 truncate">{cat.name}</span>
+                                                        <span className="shrink-0 text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full">{productCount} produk</span>
+                                                        <RowAction label={`Ubah kategori ${cat.name}`} onClick={() => handleEditCategory(cat)}>
+                                                            <IconEdit />
+                                                        </RowAction>
+                                                        <RowAction
+                                                            label={`Hapus kategori ${cat.name}`}
+                                                            tone="danger"
+                                                            disabled={productCount > 0}
+                                                            title={productCount > 0 ? 'Masih ada produk di kategori ini' : `Hapus kategori ${cat.name}`}
+                                                            onClick={() => handleDeleteCategory(cat)}
+                                                        >
+                                                            <IconTrash />
+                                                        </RowAction>
+                                                    </li>
                                                 );
-                                            })
-                                        )}
-                                    </tbody>
-                                </table>
+                                            })}
+                                        </ul>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </Panel>
                 )}
 
-                {/* ================= FILTER KATEGORI ================= */}
-                <Panel className="p-5">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Filter Berdasarkan Kategori</span>
-                    <div className="sc-noscroll flex gap-2 overflow-x-auto pt-3 pb-1">
-                        {[{ id: 'all', name: 'Semua Kategori', count: products.length }, ...categories.map((c) => ({
-                            ...c,
-                            count: products.filter((p) => String(p.category_id) === String(c.id)).length,
-                        }))].map((cat) => {
-                            const active = String(selectedCategory) === String(cat.id);
-                            return (
-                                <button
-                                    key={cat.id}
-                                    type="button"
-                                    onClick={() => setSelectedCategory(String(cat.id))}
-                                    aria-pressed={active}
-                                    className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition duration-200 active:scale-95 ${
-                                        active
-                                            ? 'bg-blue-600 border-blue-600 text-white'
-                                            : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5'
-                                    }`}
-                                >
-                                    {cat.name}
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                        {cat.count}
-                                    </span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </Panel>
-
-                {/* ================= TABEL PRODUK ================= */}
+                {/* ================= DAFTAR PRODUK ================= */}
                 <Panel className="overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-500 uppercase text-[11px]">
-                                <tr>
-                                    <th className="px-5 py-3.5 font-semibold">Produk</th>
-                                    <th className="px-5 py-3.5 font-semibold">Kategori</th>
-                                    <th className="px-5 py-3.5 font-semibold">Supplier</th>
-                                    <th className="px-5 py-3.5 font-semibold">Harga Beli</th>
-                                    <th className="px-5 py-3.5 font-semibold">Harga Jual</th>
-                                    <th className="px-5 py-3.5 font-semibold">Stok</th>
-                                    <th className="px-5 py-3.5 font-semibold text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredAndSortedProducts.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="7" className="px-5 py-14 text-center">
-                                            <span className="text-slate-300 inline-block">
-                                                <IconImage className="w-10 h-10" />
-                                            </span>
-                                            <p className="text-slate-400 text-xs mt-2">
-                                                {searchQuery || selectedCategory !== 'all'
-                                                    ? 'Produk dengan filter/pencarian tersebut tidak ditemukan.'
-                                                    : 'Belum ada data produk.'}
-                                            </p>
-                                        </td>
-                                    </tr>
+                    <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-slate-200">
+                        <h3 className="font-bold text-slate-900 text-base">Daftar Produk</h3>
+                        <span role="status" className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+                            {filteredAndSortedProducts.length} produk
+                        </span>
+                    </div>
+
+                    {filteredAndSortedProducts.length === 0 ? (
+                        <div className="px-5 py-14 text-center">
+                            <span className="text-slate-400 inline-block">
+                                <IconImage className="w-10 h-10" />
+                            </span>
+                            <p className="text-sm font-semibold text-slate-700 mt-3">
+                                {filtersActive ? 'Produk tidak ditemukan' : 'Belum ada data produk'}
+                            </p>
+                            <p className="text-sm text-slate-600 mt-1">
+                                {filtersActive ? 'Coba kata kunci atau kategori lain.' : 'Mulai dengan menambahkan produk pertama Anda.'}
+                            </p>
+                            <div className="mt-4">
+                                {filtersActive ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSearchQuery('');
+                                            setSelectedCategory('all');
+                                        }}
+                                        className={btnSecondary}
+                                    >
+                                        Reset pencarian
+                                    </button>
                                 ) : (
-                                    filteredAndSortedProducts.map((prod, i) => {
-                                        const stock = Number(prod.stock);
-                                        return (
+                                    <button type="button" onClick={openCreateModal} className={btnPrimary}>
+                                        <IconPlus />
+                                        Tambah Produk
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Tabel (layar sedang ke atas) */}
+                            <div className="hidden lg:block overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <caption className="sr-only">Daftar produk, diurutkan dari stok paling sedikit</caption>
+                                    <thead className="bg-slate-50 text-slate-600 text-xs">
+                                        <tr>
+                                            <th scope="col" className="px-5 py-3 font-semibold">Produk</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Kategori</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold hidden xl:table-cell">Supplier</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold hidden xl:table-cell">Harga beli</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Harga jual</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Stok</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold text-right">
+                                                <span className="sr-only">Aksi</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredAndSortedProducts.map((prod, i) => (
                                             <tr
                                                 key={prod.id}
                                                 style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
-                                                className="sc-rowin border-t border-slate-100 transition-colors hover:bg-slate-50"
+                                                className="sc-rowin border-t border-slate-100 transition-colors duration-150 hover:bg-slate-50"
                                             >
-                                                <td className="px-5 py-3.5">
+                                                <td className="px-5 py-3">
                                                     <div className="flex items-center gap-3">
                                                         <Thumb src={prod.image} name={prod.name} />
                                                         <div className="min-w-0">
-                                                            <p className="font-bold text-slate-800 text-sm truncate max-w-[220px]">{prod.name}</p>
-                                                            <p className="text-[11px] font-semibold text-blue-600">Kode: {prod.code}</p>
+                                                            <p className="font-bold text-slate-800 truncate max-w-[220px]">{prod.name}</p>
+                                                            <p className="text-xs font-semibold text-slate-500">{prod.code}</p>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-5 py-3.5 text-xs text-slate-600">{prod.category?.name || 'Umum'}</td>
-                                                <td className="px-5 py-3.5 text-xs text-slate-600">{prod.supplier?.name || '-'}</td>
-                                                <td className="px-5 py-3.5 text-xs text-slate-600">Rp {Number(prod.cost_price).toLocaleString('id-ID')}</td>
-                                                <td className="px-5 py-3.5 text-xs font-bold text-slate-800">Rp {Number(prod.selling_price).toLocaleString('id-ID')}</td>
-                                                <td className="px-5 py-3.5">
-                                                    <span
-                                                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                                                            stock <= 5
-                                                                ? 'bg-red-100 text-red-700'
-                                                                : stock <= 10
-                                                                ? 'bg-amber-100 text-amber-800'
-                                                                : 'bg-emerald-100 text-emerald-700'
-                                                        }`}
-                                                    >
-                                                        Sisa: {prod.stock}
-                                                    </span>
+                                                <td className="px-4 py-3 text-slate-700">{prod.category?.name || 'Umum'}</td>
+                                                <td className="px-4 py-3 text-slate-700 hidden xl:table-cell">{prod.supplier?.name || '-'}</td>
+                                                <td className="px-4 py-3 text-slate-700 whitespace-nowrap hidden xl:table-cell">{rp(prod.cost_price)}</td>
+                                                <td className="px-4 py-3 font-bold text-slate-900 whitespace-nowrap">{rp(prod.selling_price)}</td>
+                                                <td className="px-4 py-3">
+                                                    <StockBadge stock={prod.stock} />
                                                 </td>
-                                                <td className="px-5 py-3.5">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openEditModal(prod)}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-blue-600 hover:border-blue-600 hover:text-white transition duration-200 active:scale-95"
-                                                        >
+                                                <td className="px-3 py-2">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <RowAction label={`Ubah ${prod.name}`} onClick={() => openEditModal(prod)}>
                                                             <IconEdit />
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDeleteProduct(prod)}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white transition duration-200 active:scale-95"
-                                                        >
+                                                        </RowAction>
+                                                        <RowAction label={`Hapus ${prod.name}`} tone="danger" onClick={() => handleDeleteProduct(prod)}>
                                                             <IconTrash />
-                                                            Hapus
-                                                        </button>
+                                                        </RowAction>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Kartu (HP): tidak perlu menggeser tabel ke samping */}
+                            <ul role="list" className="lg:hidden divide-y divide-slate-100">
+                                {filteredAndSortedProducts.map((prod, i) => (
+                                    <li
+                                        key={prod.id}
+                                        style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
+                                        className="sc-rowin flex items-start gap-3 pl-4 pr-2 py-3"
+                                    >
+                                        <Thumb src={prod.image} name={prod.name} className="w-14 h-14" />
+                                        <div className="min-w-0 flex-1">
+                                            <p className="font-bold text-slate-800 text-sm leading-snug">{prod.name}</p>
+                                            <p className="text-xs text-slate-600 mt-0.5">
+                                                {prod.code} &middot; {prod.category?.name || 'Umum'}
+                                            </p>
+                                            <p className="text-sm font-bold text-slate-900 mt-1">{rp(prod.selling_price)}</p>
+                                            <p className="text-xs text-slate-600">
+                                                Modal {rp(prod.cost_price)}
+                                                {prod.supplier?.name ? ` · ${prod.supplier.name}` : ''}
+                                            </p>
+                                            <div className="mt-2">
+                                                <StockBadge stock={prod.stock} />
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col shrink-0">
+                                            <RowAction label={`Ubah ${prod.name}`} onClick={() => openEditModal(prod)}>
+                                                <IconEdit />
+                                            </RowAction>
+                                            <RowAction label={`Hapus ${prod.name}`} tone="danger" onClick={() => handleDeleteProduct(prod)}>
+                                                <IconTrash />
+                                            </RowAction>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
+                    )}
                 </Panel>
             </div>
 
             {/* ================= MODAL TAMBAH / EDIT PRODUK ================= */}
             {isModalOpen && (
-                <div
-                    onClick={() => setIsModalOpen(false)}
-                    className="sc-fade fixed inset-0 z-50 bg-slate-900/50 flex justify-center items-center p-4"
-                >
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="sc-pop bg-white p-6 rounded-2xl w-full max-w-md space-y-4 max-h-[90vh] overflow-y-auto"
-                    >
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                            <h3 className="text-base font-bold text-slate-900">{editProduct ? 'Edit Data Produk' : 'Tambah Produk Baru'}</h3>
-                            <button
-                                type="button"
-                                onClick={() => setIsModalOpen(false)}
-                                aria-label="Tutup"
-                                className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition active:scale-90"
-                            >
-                                <IconClose />
-                            </button>
-                        </div>
+                <DialogShell onClose={() => setIsModalOpen(false)} labelledBy="judul-modal-produk" size="md">
+                    <div className="flex justify-between items-center gap-3 px-5 sm:px-6 py-4 border-b border-slate-200">
+                        <h3 id="judul-modal-produk" className="text-base font-bold text-slate-900">
+                            {editProduct ? 'Ubah Data Produk' : 'Tambah Produk Baru'}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => setIsModalOpen(false)}
+                            aria-label="Tutup"
+                            className="w-11 h-11 -mr-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:bg-slate-200 flex items-center justify-center transition-colors duration-150"
+                        >
+                            <IconClose />
+                        </button>
+                    </div>
 
-                        <form onSubmit={handleProductSubmit} className="space-y-3.5">
-                            <Field label="Kode Produk" error={prodErrors.code}>
-                                <input
-                                    type="text"
-                                    className={`${inputCls} py-2.5`}
-                                    value={prodData.code}
-                                    onChange={(e) => setProdData('code', e.target.value)}
-                                    placeholder="Contoh: BRG-011"
-                                    required
-                                />
-                            </Field>
+                    <form onSubmit={handleProductSubmit} className="flex min-h-0 flex-1 flex-col">
+                        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field id="prod-code" label="Kode produk" error={prodErrors.code}>
+                                    <input
+                                        id="prod-code"
+                                        data-autofocus
+                                        type="text"
+                                        className={inputCls}
+                                        value={prodData.code}
+                                        onChange={(e) => setProdData('code', e.target.value)}
+                                        placeholder="Contoh: BRG-011"
+                                        aria-invalid={Boolean(prodErrors.code)}
+                                        aria-describedby={prodErrors.code ? 'prod-code-error' : undefined}
+                                        required
+                                    />
+                                </Field>
+                                <Field id="prod-name" label="Nama produk" error={prodErrors.name}>
+                                    <input
+                                        id="prod-name"
+                                        type="text"
+                                        className={inputCls}
+                                        value={prodData.name}
+                                        onChange={(e) => setProdData('name', e.target.value)}
+                                        placeholder="Nama barang"
+                                        aria-invalid={Boolean(prodErrors.name)}
+                                        aria-describedby={prodErrors.name ? 'prod-name-error' : undefined}
+                                        required
+                                    />
+                                </Field>
+                            </div>
 
-                            <Field label="Nama Produk" error={prodErrors.name}>
-                                <input
-                                    type="text"
-                                    className={`${inputCls} py-2.5`}
-                                    value={prodData.name}
-                                    onChange={(e) => setProdData('name', e.target.value)}
-                                    placeholder="Masukkan nama barang"
-                                    required
-                                />
-                            </Field>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <Field label="Kategori" error={prodErrors.category_id}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field id="prod-category" label="Kategori" error={prodErrors.category_id}>
                                     <select
-                                        className={`${inputCls} py-2.5`}
+                                        id="prod-category"
+                                        className={inputCls}
                                         value={prodData.category_id}
                                         onChange={(e) => setProdData('category_id', e.target.value)}
                                     >
-                                        <option value="">Pilih Kategori</option>
+                                        <option value="">Pilih kategori</option>
                                         {categories.map((cat) => (
                                             <option key={cat.id} value={cat.id}>
                                                 {cat.name}
@@ -769,13 +793,14 @@ export default function Index({ auth, products = [], categories = [], suppliers 
                                         ))}
                                     </select>
                                 </Field>
-                                <Field label="Supplier" error={prodErrors.supplier_id}>
+                                <Field id="prod-supplier" label="Supplier" error={prodErrors.supplier_id}>
                                     <select
-                                        className={`${inputCls} py-2.5`}
+                                        id="prod-supplier"
+                                        className={inputCls}
                                         value={prodData.supplier_id}
                                         onChange={(e) => setProdData('supplier_id', e.target.value)}
                                     >
-                                        <option value="">Pilih Supplier</option>
+                                        <option value="">Pilih supplier</option>
                                         {suppliers.map((sup) => (
                                             <option key={sup.id} value={sup.id}>
                                                 {sup.name}
@@ -785,93 +810,111 @@ export default function Index({ auth, products = [], categories = [], suppliers 
                                 </Field>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <Field label="Harga Beli (Modal)" error={prodErrors.cost_price}>
-                                    <input
-                                        type="number"
-                                        className={`${inputCls} py-2.5`}
-                                        value={prodData.cost_price}
-                                        onChange={(e) => setProdData('cost_price', e.target.value)}
-                                        required
-                                    />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field id="prod-cost" label="Harga beli (modal)" error={prodErrors.cost_price}>
+                                    <div className="relative">
+                                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">Rp</span>
+                                        <input
+                                            id="prod-cost"
+                                            type="number"
+                                            inputMode="numeric"
+                                            min="0"
+                                            className={`${inputCls} pl-10`}
+                                            value={prodData.cost_price}
+                                            onChange={(e) => setProdData('cost_price', e.target.value)}
+                                            aria-invalid={Boolean(prodErrors.cost_price)}
+                                            aria-describedby={prodErrors.cost_price ? 'prod-cost-error' : undefined}
+                                            required
+                                        />
+                                    </div>
                                 </Field>
-                                <Field label="Harga Jual" error={prodErrors.selling_price}>
-                                    <input
-                                        type="number"
-                                        className={`${inputCls} py-2.5`}
-                                        value={prodData.selling_price}
-                                        onChange={(e) => setProdData('selling_price', e.target.value)}
-                                        required
-                                    />
+                                <Field id="prod-price" label="Harga jual" error={prodErrors.selling_price}>
+                                    <div className="relative">
+                                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">Rp</span>
+                                        <input
+                                            id="prod-price"
+                                            type="number"
+                                            inputMode="numeric"
+                                            min="0"
+                                            className={`${inputCls} pl-10`}
+                                            value={prodData.selling_price}
+                                            onChange={(e) => setProdData('selling_price', e.target.value)}
+                                            aria-invalid={Boolean(prodErrors.selling_price)}
+                                            aria-describedby={prodErrors.selling_price ? 'prod-price-error' : undefined}
+                                            required
+                                        />
+                                    </div>
                                 </Field>
                             </div>
 
-                            <Field label="Stok Awal" error={prodErrors.stock}>
+                            <Field id="prod-stock" label={editProduct ? 'Stok saat ini' : 'Stok awal'} error={prodErrors.stock}>
                                 <input
+                                    id="prod-stock"
                                     type="number"
-                                    className={`${inputCls} py-2.5`}
+                                    inputMode="numeric"
+                                    min="0"
+                                    className={inputCls}
                                     value={prodData.stock}
                                     onChange={(e) => setProdData('stock', e.target.value)}
+                                    aria-invalid={Boolean(prodErrors.stock)}
+                                    aria-describedby={prodErrors.stock ? 'prod-stock-error' : undefined}
                                     required
                                 />
                             </Field>
 
-                            <Field label="URL Foto Produk" error={prodErrors.image}>
+                            <Field id="prod-image" label="Foto produk (opsional)" error={prodErrors.image} hint="Tempel link foto; pratinjau tampil di sebelah kiri.">
                                 <div className="flex items-start gap-3">
-                                    <Thumb src={imagePreview} name={prodData.name || 'F'} className="w-14 h-14" />
-                                    <div className="flex-1">
-                                        <input
-                                            type="url"
-                                            placeholder="https://example.com/gambar.jpg"
-                                            value={prodData.image}
-                                            onChange={(e) => setProdData('image', e.target.value)}
-                                            className={`${inputCls} py-2.5`}
-                                        />
-                                        <p className="text-[10px] text-slate-400 mt-1">Tempel link foto; pratinjau tampil di sebelah kiri.</p>
-                                    </div>
+                                    <Thumb src={imagePreview} name={prodData.name || 'F'} className="w-12 h-12" />
+                                    <input
+                                        id="prod-image"
+                                        type="url"
+                                        placeholder="https://example.com/gambar.jpg"
+                                        value={prodData.image}
+                                        onChange={(e) => setProdData('image', e.target.value)}
+                                        aria-invalid={Boolean(prodErrors.image)}
+                                        aria-describedby={prodErrors.image ? 'prod-image-error' : undefined}
+                                        className={inputCls}
+                                    />
                                 </div>
                             </Field>
+                        </div>
 
-                            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 mt-5">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={prodProcessing}
-                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                                >
-                                    {prodProcessing && <Spinner />}
-                                    {prodProcessing ? 'Menyimpan...' : 'Simpan'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-slate-200 px-5 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className={btnSecondary}>
+                                Batal
+                            </button>
+                            <button type="submit" disabled={prodProcessing} aria-busy={prodProcessing} className={btnPrimary}>
+                                {prodProcessing && <Spinner />}
+                                {prodProcessing ? 'Menyimpan...' : 'Simpan'}
+                            </button>
+                        </div>
+                    </form>
+                </DialogShell>
             )}
 
             {/* ================= DIALOG KONFIRMASI ================= */}
             {confirmState && (
-                <div
-                    onClick={() => setConfirmState(null)}
-                    className="sc-fade fixed inset-0 z-[70] bg-slate-900/50 flex justify-center items-center p-4"
+                <DialogShell
+                    onClose={() => setConfirmState(null)}
+                    role="alertdialog"
+                    labelledBy="judul-konfirmasi"
+                    describedBy="isi-konfirmasi"
+                    size="sm"
+                    z="z-[70]"
+                    initialFocus="cancel"
                 >
-                    <div onClick={(e) => e.stopPropagation()} className="sc-pop bg-white rounded-2xl p-6 w-full max-w-sm text-center">
-                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                    <div className="p-6 text-center">
+                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center" aria-hidden="true">
                             <IconTrash className="w-5 h-5" />
                         </span>
-                        <h3 className="text-base font-bold text-slate-900 mt-4">{confirmState.title}</h3>
-                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{confirmState.message}</p>
-                        <div className="flex gap-2 mt-6">
-                            <button
-                                type="button"
-                                onClick={() => setConfirmState(null)}
-                                className="flex-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                            >
+                        <h3 id="judul-konfirmasi" className="text-base font-bold text-slate-900 mt-4">
+                            {confirmState.title}
+                        </h3>
+                        <p id="isi-konfirmasi" className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+                            {confirmState.message}
+                        </p>
+                        <div className="flex gap-2 mt-6 pb-[env(safe-area-inset-bottom)]">
+                            <button type="button" data-dialog-cancel onClick={() => setConfirmState(null)} className={`${btnSecondary} flex-1`}>
                                 Batal
                             </button>
                             <button
@@ -880,13 +923,13 @@ export default function Index({ auth, products = [], categories = [], suppliers 
                                     confirmState.onConfirm();
                                     setConfirmState(null);
                                 }}
-                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="inline-flex flex-1 items-center justify-center min-h-[44px] rounded-xl bg-red-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-red-700 active:brightness-90"
                             >
                                 {confirmState.confirmLabel}
                             </button>
                         </div>
                     </div>
-                </div>
+                </DialogShell>
             )}
         </AuthenticatedLayout>
     );

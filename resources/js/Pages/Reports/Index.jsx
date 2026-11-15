@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DialogShell from '@/Components/DialogShell';
+import Toast from '@/Components/Toast';
 import { Head, router } from '@inertiajs/react';
 import {
     Chart as ChartJS,
@@ -18,26 +20,25 @@ import { Line } from 'react-chartjs-2';
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 /* ================================================================== */
+/*  Laporan & Analisis Penjualan                                       */
+/*  Letakkan di: resources/js/Pages/Reports/Index.jsx                  */
+/*  Membutuhkan: Components/DialogShell.jsx dan Components/Toast.jsx   */
+/* ================================================================== */
+
+/* ================================================================== */
 /*  CSS (animasi ringan, selaras dengan halaman lain)                  */
 /* ================================================================== */
 const css = `
 @keyframes sc-rowin { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-@keyframes sc-pop { 0% { transform: scale(.94); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
-@keyframes sc-toast { from { opacity: 0; transform: translateY(-12px) scale(.96) } to { opacity: 1; transform: none } }
-@keyframes sc-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sc-pop { 0% { transform: scale(.96); opacity: 0 } 100% { transform: none; opacity: 1 } }
 @keyframes sc-spin { to { transform: rotate(360deg) } }
-.sc-rowin { animation: sc-rowin .35s cubic-bezier(.22,1,.36,1) backwards }
+.sc-rowin { animation: sc-rowin .3s cubic-bezier(.22,1,.36,1) backwards }
 .sc-pop { animation: sc-pop .2s cubic-bezier(.22,1,.36,1) backwards }
-.sc-toast { animation: sc-toast .3s cubic-bezier(.22,1,.36,1) backwards }
-.sc-fade { animation: sc-fade .2s ease backwards }
 .sc-spin { animation: sc-spin .8s linear infinite }
-.sc-reveal { opacity: 0; transform: translateY(20px); transition: opacity .6s cubic-bezier(.22,1,.36,1), transform .6s cubic-bezier(.22,1,.36,1) }
-.sc-reveal.sc-in { opacity: 1; transform: none }
 .sc-noscroll::-webkit-scrollbar { display: none }
 .sc-noscroll { scrollbar-width: none }
 @media (prefers-reduced-motion: reduce) {
-    .sc-reveal { opacity: 1 !important; transform: none !important; transition: none !important }
-    .sc-rowin, .sc-pop, .sc-toast, .sc-fade { animation: none !important }
+    .sc-rowin, .sc-pop { animation: none !important }
 }
 `;
 
@@ -80,75 +81,10 @@ const getDiscountInfo = (trx) => {
     return { has: amount > 0 || Boolean(rel), amount, subtotal, name, label };
 };
 
-const Reveal = ({ children, delay = 0, className = '' }) => {
-    const ref = useRef(null);
-    const [shown, setShown] = useState(false);
-
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-        const io = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setShown(true);
-                    io.disconnect();
-                }
-            },
-            { threshold: 0.08 }
-        );
-        io.observe(el);
-        return () => io.disconnect();
-    }, []);
-
-    return (
-        <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`sc-reveal ${shown ? 'sc-in' : ''} ${className}`}>
-            {children}
-        </div>
-    );
-};
-
-const CountUp = ({ to = 0, prefix = '', duration = 1100 }) => {
-    const ref = useRef(null);
-    const [n, setN] = useState(0);
-
-    useEffect(() => {
-        const el = ref.current;
-        if (!el) return;
-        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const io = new IntersectionObserver(
-            ([entry]) => {
-                if (!entry.isIntersecting) return;
-                io.disconnect();
-                if (reduce) {
-                    setN(to);
-                    return;
-                }
-                const t0 = performance.now();
-                const tick = (t) => {
-                    const p = Math.min((t - t0) / duration, 1);
-                    setN(p < 1 ? Math.round(to * (1 - Math.pow(1 - p, 3))) : to);
-                    if (p < 1) requestAnimationFrame(tick);
-                };
-                requestAnimationFrame(tick);
-            },
-            { threshold: 0.5 }
-        );
-        io.observe(el);
-        return () => io.disconnect();
-    }, [to, duration]);
-
-    return (
-        <span ref={ref}>
-            {prefix}
-            {Number(n).toLocaleString('id-ID')}
-        </span>
-    );
-};
-
 /* ================================================================== */
 /*  IKON                                                               */
 /* ================================================================== */
-const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
 
 const IconChart = ({ className = 'w-5 h-5' }) => (
     <svg viewBox="0 0 24 24" className={className} {...ip}>
@@ -231,44 +167,149 @@ const IconChevron = ({ className = 'w-3.5 h-3.5' }) => (
 /*  KOMPONEN KECIL                                                     */
 /* ================================================================== */
 const inputCls =
-    'w-full text-sm rounded-xl border-slate-200 bg-white transition duration-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
+    'w-full min-h-[44px] text-base sm:text-sm rounded-xl bg-white placeholder:text-slate-400 transition duration-150 focus:ring-4';
+const okBorder = 'border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-blue-100';
+
+const btnPrimary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl bg-blue-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-blue-700 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600';
+const btnSecondary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold transition-colors duration-150 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed';
+const textBtn =
+    'inline-flex items-center gap-1.5 min-h-[44px] text-sm font-bold text-blue-600 transition-colors duration-150 hover:text-blue-800 active:opacity-70';
+const dangerBtn =
+    'inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-xl border border-red-200 bg-white text-red-600 text-sm font-bold transition-colors duration-150 hover:bg-red-600 hover:border-red-600 hover:text-white active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed';
+const chipCls = (active) =>
+    `shrink-0 inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors duration-150 ${
+        active
+            ? 'bg-blue-600 border-blue-600 text-white active:brightness-90'
+            : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50'
+    }`;
 
 const Panel = ({ children, className = '' }) => (
     <div className={`bg-white rounded-2xl border border-slate-200 ${className}`}>{children}</div>
 );
 
-const SectionTitle = ({ icon, children, right }) => (
-    <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="flex items-center gap-2.5 text-[15px] font-bold text-slate-900">
-            <span className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">{icon}</span>
-            {children}
-        </h3>
-        {right}
-    </div>
-);
-
-const StatCard = ({ label, value, sub, icon }) => (
-    <div className="group h-full bg-white rounded-2xl border border-slate-200 p-5 flex items-center justify-between gap-3 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/70">
-        <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
-            <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1.5 tracking-tight truncate">{value}</h3>
-            {sub && <p className="text-[11px] text-slate-400 mt-0.5 truncate">{sub}</p>}
-        </div>
-        <div className="w-12 h-12 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center transition duration-200 group-hover:bg-blue-600 group-hover:text-white">
-            {icon}
-        </div>
-    </div>
-);
-
 const Spinner = () => (
-    <svg viewBox="0 0 24 24" className="sc-spin w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className="sc-spin w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
         <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
 );
 
+/* Ringkasan: satu panel, kolom dipisah garis tipis (lebih ringan daripada empat kartu) */
+const SummaryStrip = ({ items }) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200">
+        {items.map((it) => (
+            <div key={it.label} className="flex items-center gap-3.5 bg-white p-4 sm:p-5">
+                <span className="w-11 h-11 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">{it.icon}</span>
+                <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-600">{it.label}</p>
+                    <p className="text-xl font-extrabold text-slate-900 leading-tight tracking-tight break-words">{it.value}</p>
+                    {it.sub && <p className="text-xs text-slate-600 mt-0.5">{it.sub}</p>}
+                </div>
+            </div>
+        ))}
+    </div>
+);
+
+const StatusBadge = ({ cancelled }) => (
+    <span className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full whitespace-nowrap ${cancelled ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+        {cancelled ? 'Dibatalkan' : 'Selesai'}
+    </span>
+);
+
+const DiscountBadge = () => (
+    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+        <IconTag className="w-3 h-3" />
+        Diskon
+    </span>
+);
+
+/* Rincian belanja satu transaksi (dipakai di tabel dan kartu) */
+const TrxDetails = ({ trx, disc, open, onToggle }) => {
+    const details = trx.details || [];
+    const visible = open ? details : details.slice(0, 2);
+    const hiddenCount = details.length - 2;
+    return (
+        <div>
+            <ul className="text-sm space-y-1.5">
+                {visible.map((detail) => (
+                    <li key={detail.id} className="flex items-start gap-2 text-slate-700">
+                        <span className="mt-2 w-1.5 h-1.5 shrink-0 rounded-full bg-blue-400" aria-hidden="true" />
+                        <span>
+                            {detail.product?.name || 'Produk'}{' '}
+                            <span className="text-slate-600">
+                                ({detail.qty} x {rp(detail.unit_price)})
+                            </span>
+                        </span>
+                    </li>
+                ))}
+            </ul>
+
+            {disc.has && (
+                <dl className="mt-3 border-t border-dashed border-slate-300 pt-2 text-sm max-w-[280px] space-y-1">
+                    <div className="flex justify-between gap-4 text-slate-600">
+                        <dt>Subtotal</dt>
+                        <dd className="font-semibold text-slate-700">{rp(disc.subtotal)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4 text-emerald-700 font-semibold">
+                        <dt>
+                            {disc.name || 'Diskon'}
+                            {disc.label && ` (${disc.label})`}
+                        </dt>
+                        <dd>- {rp(disc.amount)}</dd>
+                    </div>
+                </dl>
+            )}
+
+            {details.length > 2 && (
+                <button type="button" onClick={onToggle} aria-expanded={open} className={`${textBtn} mt-1`}>
+                    {open ? 'Sembunyikan' : `Lihat ${hiddenCount} lainnya`}
+                    <span className={`transition-transform duration-150 ${open ? 'rotate-180' : ''}`}>
+                        <IconChevron />
+                    </span>
+                </button>
+            )}
+        </div>
+    );
+};
+
+/* Memantau perubahan tema aplikasi agar warna grafik ikut berganti */
+function useThemeTick() {
+    const [tick, setTick] = useState(0);
+    useEffect(() => {
+        const mo = new MutationObserver(() => setTick((t) => t + 1));
+        mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+        return () => mo.disconnect();
+    }, []);
+    return tick;
+}
+
 /* ================================================================== */
 /*  HALAMAN LAPORAN                                                    */
 /* ================================================================== */
+const PRESETS = [
+    { key: 'today', label: 'Hari Ini' },
+    { key: 'week', label: '7 Hari' },
+    { key: 'month30', label: '30 Hari' },
+    { key: 'thisMonth', label: 'Bulan Ini' },
+];
+
+// rentang tanggal untuk setiap pintasan: [mulai, selesai]
+const presetRange = (key) => {
+    const today = new Date();
+    let start = new Date(today);
+    if (key === 'week') start.setDate(today.getDate() - 6);
+    if (key === 'month30') start.setDate(today.getDate() - 29);
+    if (key === 'thisMonth') start = new Date(today.getFullYear(), today.getMonth(), 1);
+    return [toInputDate(start), toInputDate(today)];
+};
+
+const fmtDay = (v) => {
+    if (!v) return '';
+    const [y, m, d] = String(v).slice(0, 10).split('-').map(Number);
+    return new Date(y, (m || 1) - 1, d || 1).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
 export default function Index({ auth, transactions = [], totalRevenue = 0, totalTransactions = 0, chartData = [], filters = {} }) {
     const [startDate, setStartDate] = useState(filters.start_date || '');
     const [endDate, setEndDate] = useState(filters.end_date || '');
@@ -283,19 +324,9 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
     const [confirmState, setConfirmState] = useState(null);
     const [cancellingId, setCancellingId] = useState(null);
 
+    const themeTick = useThemeTick(); // eslint-disable-line no-unused-vars
+
     const showToast = (type, message) => setToast({ type, message, id: Date.now() });
-
-    useEffect(() => {
-        if (!toast) return;
-        const t = setTimeout(() => setToast(null), 3200);
-        return () => clearTimeout(t);
-    }, [toast]);
-
-    useEffect(() => {
-        const onKey = (e) => e.key === 'Escape' && setConfirmState(null);
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, []);
 
     /* ---------- filter tanggal ---------- */
     const applyFilter = (start, end) => {
@@ -315,24 +346,27 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
 
     // pintasan rentang tanggal
     const applyPreset = (key) => {
-        const today = new Date();
-        let start = new Date(today);
-        if (key === 'week') start.setDate(today.getDate() - 6);
-        if (key === 'month30') start.setDate(today.getDate() - 29);
-        if (key === 'thisMonth') start = new Date(today.getFullYear(), today.getMonth(), 1);
-        const s = toInputDate(start);
-        const e = toInputDate(today);
+        const [s, e] = presetRange(key);
         setStartDate(s);
         setEndDate(e);
         applyFilter(s, e);
     };
 
-    const presets = [
-        { key: 'today', label: 'Hari Ini' },
-        { key: 'week', label: '7 Hari' },
-        { key: 'month30', label: '30 Hari' },
-        { key: 'thisMonth', label: 'Bulan Ini' },
-    ];
+    const isPresetActive = (key) => {
+        const [s, e] = presetRange(key);
+        return filters.start_date === s && filters.end_date === e;
+    };
+
+    const periodText =
+        filters.start_date && filters.end_date
+            ? filters.start_date === filters.end_date
+                ? fmtDay(filters.start_date)
+                : `${fmtDay(filters.start_date)} - ${fmtDay(filters.end_date)}`
+            : filters.start_date
+            ? `Mulai ${fmtDay(filters.start_date)}`
+            : filters.end_date
+            ? `Sampai ${fmtDay(filters.end_date)}`
+            : 'Semua periode';
 
     /* ---------- pembatalan transaksi ---------- */
     const handleCancelTransaction = (trx) => {
@@ -392,6 +426,9 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
             (trx.details || []).some((d) => (d.product?.name || '').toLowerCase().includes(q));
         return matchesStatus && matchesSearch;
     });
+    const filtersActive = Boolean(q) || statusFilter !== 'all';
+
+    const toggleExpanded = (id) => setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
 
     /* ---------- unduh CSV ---------- */
     const downloadCsv = () => {
@@ -429,10 +466,11 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
         return n;
     };
 
-    const primaryRgb = cssRgb('--p-600', '37, 99, 235');
+    const reduceMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const lineRgb = cssRgb('--p-500', '79, 99, 224');
     const surfaceRgb = cssRgb('--surface', '255, 255, 255');
-    const gridColor = `rgb(${cssRgb('--s-100', '241, 245, 249')})`;
-    const tickColor = `rgb(${cssRgb('--s-400', '148, 163, 184')})`;
+    const gridColor = `rgb(${cssRgb('--s-200', '211, 223, 243')})`;
+    const tickColor = `rgb(${cssRgb('--s-500', '79, 94, 130')})`;
 
     const data = {
         labels: chartData.map((item) => item.date),
@@ -440,15 +478,15 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
             {
                 label: 'Omset Harian (Rp)',
                 data: chartData.map((item) => item.total),
-                borderColor: `rgb(${primaryRgb})`,
-                backgroundColor: `rgba(${primaryRgb}, 0.1)`,
+                borderColor: `rgb(${lineRgb})`,
+                backgroundColor: `rgba(${lineRgb}, 0.12)`,
                 borderWidth: 2.5,
                 fill: true,
                 tension: 0.3,
                 pointRadius: 3,
                 pointHoverRadius: 6,
                 pointBackgroundColor: `rgb(${surfaceRgb})`,
-                pointBorderColor: `rgb(${primaryRgb})`,
+                pointBorderColor: `rgb(${lineRgb})`,
                 pointBorderWidth: 2,
             },
         ],
@@ -457,6 +495,7 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
     const options = {
         responsive: true,
         maintainAspectRatio: false,
+        animation: reduceMotion ? false : { duration: 500 },
         interaction: { mode: 'index', intersect: false },
         plugins: {
             legend: { display: false },
@@ -465,18 +504,20 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
                 padding: 10,
                 cornerRadius: 10,
                 displayColors: false,
+                titleFont: { size: 12 },
+                bodyFont: { size: 13 },
                 callbacks: {
                     label: (ctx) => ` ${rp(ctx.parsed.y)}`,
                 },
             },
         },
         scales: {
-            x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 11 } } },
+            x: { grid: { display: false }, ticks: { color: tickColor, font: { size: 12 }, maxRotation: 0, autoSkip: true } },
             y: {
                 beginAtZero: true,
                 grid: { color: gridColor },
                 border: { display: false },
-                ticks: { color: tickColor, font: { size: 11 }, callback: (v) => shortRp(v) },
+                ticks: { color: tickColor, font: { size: 12 }, callback: (v) => shortRp(v) },
             },
         },
     };
@@ -493,7 +534,7 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
             user={auth.user}
             header={
                 <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center" aria-hidden="true">
                         <IconChart />
                     </span>
                     <h2 className="font-extrabold text-xl text-slate-900 tracking-tight leading-tight truncate">
@@ -505,381 +546,360 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
             <Head title="Laporan & Analisis" />
             <style>{css}</style>
 
-            {/* TOAST */}
-            {toast && (
-                <div className="fixed top-20 right-4 sm:right-6 z-[60]">
-                    <div
-                        key={toast.id}
-                        className={`sc-toast flex items-start gap-3 max-w-sm rounded-2xl px-4 py-3 border text-sm font-semibold ${
-                            toast.type === 'success'
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                : 'bg-red-50 border-red-200 text-red-800'
-                        }`}
-                    >
-                        <span
-                            className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-white ${
-                                toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
-                            }`}
-                        >
-                            {toast.type === 'success' ? <IconCheck /> : <IconClose className="w-3 h-3" />}
-                        </span>
-                        <span className="leading-snug">{toast.message}</span>
-                        <button type="button" onClick={() => setToast(null)} aria-label="Tutup" className="ml-1 opacity-60 hover:opacity-100 transition">
-                            <IconClose className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <Toast toast={toast} onClose={() => setToast(null)} />
 
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-5">
                 {/* ===================== FILTER TANGGAL ===================== */}
-                <Reveal>
-                    <Panel className="p-5">
-                        <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-5">
-                            <form onSubmit={handleFilter} className="flex flex-col sm:flex-row sm:items-end gap-3">
-                                <div className="w-full sm:w-auto">
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Mulai</label>
-                                    <input type="date" className={`${inputCls} py-2.5`} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                                </div>
-                                <div className="w-full sm:w-auto">
-                                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">Tanggal Selesai</label>
-                                    <input type="date" className={`${inputCls} py-2.5`} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-                                </div>
-                                <div className="flex gap-2 w-full sm:w-auto">
-                                    <button
-                                        type="submit"
-                                        className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition duration-200 hover:-translate-y-0.5 active:scale-95"
-                                    >
-                                        Terapkan Filter
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={handleReset}
-                                        className="inline-flex items-center justify-center gap-1.5 bg-white border border-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold hover:bg-slate-100 transition duration-200 active:scale-95"
-                                    >
-                                        <IconUndo />
-                                        Reset
-                                    </button>
-                                </div>
-                            </form>
-
-                            {/* pintasan rentang tanggal */}
+                <Panel className="p-4 sm:p-5 space-y-4">
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                        <form onSubmit={handleFilter} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-3 sm:items-end">
                             <div>
-                                <p className="text-[11px] font-semibold text-slate-500 mb-1.5">Pintasan</p>
-                                <div className="sc-noscroll flex gap-2 overflow-x-auto">
-                                    {presets.map((p) => (
-                                        <button
-                                            key={p.key}
-                                            type="button"
-                                            onClick={() => applyPreset(p.key)}
-                                            className="shrink-0 text-xs font-bold px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5 transition duration-200 active:scale-95"
-                                        >
-                                            {p.label}
-                                        </button>
-                                    ))}
-                                </div>
+                                <label htmlFor="rep-start" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Tanggal mulai
+                                </label>
+                                <input id="rep-start" type="date" className={`${inputCls} ${okBorder}`} value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                            </div>
+                            <div>
+                                <label htmlFor="rep-end" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Tanggal selesai
+                                </label>
+                                <input id="rep-end" type="date" className={`${inputCls} ${okBorder}`} value={endDate} min={startDate || undefined} onChange={(e) => setEndDate(e.target.value)} />
+                            </div>
+                            <div className="flex gap-2">
+                                <button type="submit" className={`${btnPrimary} flex-1 sm:flex-none`}>
+                                    Terapkan
+                                </button>
+                                <button type="button" onClick={handleReset} className={`${btnSecondary} flex-1 sm:flex-none`}>
+                                    <IconUndo />
+                                    Reset
+                                </button>
+                            </div>
+                        </form>
+
+                        {/* pintasan rentang tanggal */}
+                        <div>
+                            <p id="rep-preset-label" className="text-sm font-semibold text-slate-700 mb-1.5">
+                                Pintasan
+                            </p>
+                            <div role="group" aria-labelledby="rep-preset-label" className="sc-noscroll flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+                                {PRESETS.map((p) => (
+                                    <button key={p.key} type="button" onClick={() => applyPreset(p.key)} aria-pressed={isPresetActive(p.key)} className={chipCls(isPresetActive(p.key))}>
+                                        {p.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
-                    </Panel>
-                </Reveal>
+                    </div>
+
+                    <p className="text-sm text-slate-600" role="status">
+                        Periode laporan: <b className="text-slate-800">{periodText}</b>
+                    </p>
+                </Panel>
 
                 {/* ===================== RINGKASAN ===================== */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                    <Reveal delay={60} className="h-full">
-                        <StatCard label="Total Pendapatan (Omset)" value={<CountUp to={Number(totalRevenue)} prefix="Rp " />} icon={<IconWallet />} />
-                    </Reveal>
-                    <Reveal delay={120} className="h-full">
-                        <StatCard
-                            label="Transaksi Berhasil"
-                            value={
-                                <>
-                                    <CountUp to={Number(totalTransactions)} />
-                                    <span className="text-sm font-semibold text-slate-400 ml-1.5">Transaksi</span>
-                                </>
-                            }
-                            icon={<IconReceipt />}
-                        />
-                    </Reveal>
-                    <Reveal delay={180} className="h-full">
-                        <StatCard label="Rata-rata / Transaksi" value={<CountUp to={average} prefix="Rp " />} icon={<IconTrend />} />
-                    </Reveal>
-                    <Reveal delay={240} className="h-full">
-                        <StatCard
-                            label="Hari Terbaik"
-                            value={bestDay ? rp(bestDay.total) : '-'}
-                            sub={bestDay ? bestDay.date : 'Belum ada data'}
-                            icon={<IconCalendar />}
-                        />
-                    </Reveal>
-                </div>
+                <SummaryStrip
+                    items={[
+                        { icon: <IconWallet />, label: 'Total pendapatan (omset)', value: rp(totalRevenue) },
+                        { icon: <IconReceipt />, label: 'Transaksi berhasil', value: `${Number(totalTransactions).toLocaleString('id-ID')} transaksi` },
+                        { icon: <IconTrend />, label: 'Rata-rata per transaksi', value: rp(average) },
+                        { icon: <IconCalendar />, label: 'Hari terbaik', value: bestDay ? rp(bestDay.total) : '-', sub: bestDay ? bestDay.date : 'Belum ada data' },
+                    ]}
+                />
 
                 {/* ===================== GRAFIK ===================== */}
-                <Reveal delay={80}>
-                    <Panel className="p-6 space-y-5">
-                        <SectionTitle icon={<IconTrend className="w-4 h-4" />}>Grafik Tren Pendapatan Harian</SectionTitle>
-                        {chartData.length === 0 ? (
-                            <div className="text-center py-12">
-                                <span className="text-slate-300 inline-block">
-                                    <IconChart className="w-10 h-10" />
-                                </span>
-                                <p className="text-slate-400 text-xs mt-2">Belum ada data grafik untuk periode ini.</p>
-                            </div>
-                        ) : (
-                            <div className="w-full h-[300px]">
+                <Panel className="p-4 sm:p-6">
+                    <div className="flex items-center justify-between gap-3">
+                        <h3 className="font-bold text-slate-900 text-base">Tren Pendapatan Harian</h3>
+                        {chartData.length > 0 && <span className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">{chartData.length} hari</span>}
+                    </div>
+
+                    {chartData.length === 0 ? (
+                        <div className="text-center py-12">
+                            <span className="text-slate-400 inline-block">
+                                <IconChart className="w-10 h-10" />
+                            </span>
+                            <p className="text-sm font-semibold text-slate-700 mt-3">Belum ada data grafik</p>
+                            <p className="text-sm text-slate-600 mt-1">Ubah rentang tanggal untuk periode lain.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div
+                                role="img"
+                                aria-label={`Grafik garis omset harian selama ${chartData.length} hari. Hari terbaik ${bestDay.date} sebesar ${rp(bestDay.total)}. Data lengkap tersedia pada tabel di bawah grafik.`}
+                                className="mt-4 w-full h-[240px] sm:h-[300px]"
+                            >
                                 <Line data={data} options={options} />
                             </div>
-                        )}
-                    </Panel>
-                </Reveal>
+
+                            <details className="group mt-3">
+                                <summary className={`${textBtn} list-none cursor-pointer select-none [&::-webkit-details-marker]:hidden`}>
+                                    Lihat data dalam tabel
+                                    <span className="transition-transform duration-150 group-open:rotate-180">
+                                        <IconChevron />
+                                    </span>
+                                </summary>
+                                <div className="mt-2 max-h-64 overflow-auto rounded-xl border border-slate-200">
+                                    <table className="w-full text-left text-sm">
+                                        <caption className="sr-only">Omset per hari</caption>
+                                        <thead className="sticky top-0 bg-slate-50 text-slate-600 text-xs">
+                                            <tr>
+                                                <th scope="col" className="px-4 py-2.5 font-semibold">Tanggal</th>
+                                                <th scope="col" className="px-4 py-2.5 font-semibold text-right">Omset</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {chartData.map((item) => (
+                                                <tr key={item.date} className="border-t border-slate-100">
+                                                    <td className="px-4 py-2 text-slate-700">{item.date}</td>
+                                                    <td className="px-4 py-2 text-right font-semibold text-slate-800">{rp(item.total)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </details>
+                        </>
+                    )}
+                </Panel>
 
                 {/* ===================== RIWAYAT TRANSAKSI ===================== */}
-                <Reveal delay={80}>
-                    <Panel className="overflow-hidden">
-                        <div className="p-5 border-b border-slate-100 space-y-4">
-                            <SectionTitle
-                                icon={<IconReceipt className="w-4 h-4" />}
-                                right={
-                                    <button
-                                        type="button"
-                                        onClick={downloadCsv}
-                                        disabled={shownTransactions.length === 0}
-                                        className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5 transition duration-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
-                                    >
-                                        <IconDownload />
-                                        Unduh CSV
-                                    </button>
-                                }
-                            >
-                                Riwayat &amp; Status Transaksi
-                            </SectionTitle>
+                <Panel className="overflow-hidden">
+                    <div className="p-4 sm:p-5 border-b border-slate-200 space-y-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <h3 className="font-bold text-slate-900 text-base">Riwayat &amp; Status Transaksi</h3>
+                                <span role="status" className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+                                    {filtersActive ? `${shownTransactions.length} dari ${transactions.length}` : transactions.length}
+                                </span>
+                            </div>
+                            <button type="button" onClick={downloadCsv} disabled={shownTransactions.length === 0} className={btnSecondary}>
+                                <IconDownload />
+                                Unduh CSV
+                            </button>
+                        </div>
 
+                        <p className="text-sm text-slate-600 leading-relaxed">
                             {discountedCount > 0 && (
-                                <p className="flex items-center gap-2 text-xs text-slate-500 -mt-1">
-                                    <span className="text-emerald-600">
-                                        <IconTag />
-                                    </span>
-                                    <span>
-                                        <b className="text-slate-700">{discountedCount}</b> transaksi memakai diskon, total potongan{' '}
-                                        <b className="text-emerald-700">{rp(totalDiscountGiven)}</b> (tidak termasuk yang dibatalkan).
-                                    </span>
-                                </p>
+                                <>
+                                    <b className="text-slate-800">{discountedCount}</b> transaksi memakai diskon, total potongan{' '}
+                                    <b className="text-emerald-700">{rp(totalDiscountGiven)}</b> (tidak termasuk yang dibatalkan).{' '}
+                                </>
                             )}
+                            Transaksi hanya bisa dibatalkan dalam 24 jam.
+                        </p>
 
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                <div className="sc-noscroll flex gap-2 overflow-x-auto">
-                                    {statusTabs.map((tab) => {
-                                        const active = statusFilter === tab.key;
-                                        return (
-                                            <button
-                                                key={tab.key}
-                                                type="button"
-                                                onClick={() => setStatusFilter(tab.key)}
-                                                aria-pressed={active}
-                                                className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition duration-200 active:scale-95 ${
-                                                    active
-                                                        ? 'bg-blue-600 border-blue-600 text-white'
-                                                        : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
-                                                }`}
-                                            >
-                                                {tab.label}
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                                    {tab.count}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                            <div role="group" aria-label="Filter status transaksi" className="sc-noscroll flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
+                                {statusTabs.map((tab) => {
+                                    const active = statusFilter === tab.key;
+                                    return (
+                                        <button key={tab.key} type="button" onClick={() => setStatusFilter(tab.key)} aria-pressed={active} className={chipCls(active)}>
+                                            {tab.label}
+                                            <span className={`text-xs font-bold px-1.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>{tab.count}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                                <div className="relative w-full md:w-72">
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                        <IconSearch />
-                                    </span>
-                                    <input
-                                        type="text"
-                                        value={search}
-                                        onChange={(e) => setSearch(e.target.value)}
-                                        placeholder="Cari kode, kasir, atau produk..."
-                                        className={`${inputCls} text-xs pl-9 pr-9 py-2.5 placeholder:text-slate-400`}
-                                    />
-                                    {search && (
+                            <div className="relative w-full lg:w-72">
+                                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
+                                    <IconSearch />
+                                </span>
+                                <input
+                                    type="text"
+                                    inputMode="search"
+                                    autoComplete="off"
+                                    aria-label="Cari transaksi berdasarkan kode, kasir, atau produk"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Cari kode, kasir, atau produk..."
+                                    className={`${inputCls} pl-10 pr-12 ${okBorder}`}
+                                />
+                                {search && (
+                                    <span className="absolute right-1 top-1/2 -translate-y-1/2">
                                         <button
                                             type="button"
                                             onClick={() => setSearch('')}
                                             aria-label="Hapus pencarian"
-                                            className="sc-pop absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition active:scale-90"
+                                            className="sc-pop w-10 h-10 rounded-xl text-slate-500 hover:bg-red-100 hover:text-red-600 active:bg-red-200 flex items-center justify-center transition-colors duration-150"
                                         >
-                                            <IconClose className="w-3 h-3" />
+                                            <IconClose />
                                         </button>
-                                    )}
-                                </div>
+                                    </span>
+                                )}
                             </div>
                         </div>
+                    </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-50 text-slate-500 uppercase text-[11px]">
-                                    <tr>
-                                        <th className="px-5 py-3.5 font-semibold">Kode / Tanggal</th>
-                                        <th className="px-5 py-3.5 font-semibold">Kasir</th>
-                                        <th className="px-5 py-3.5 font-semibold">Detail Belanjaan</th>
-                                        <th className="px-5 py-3.5 font-semibold">Total Bayar</th>
-                                        <th className="px-5 py-3.5 font-semibold">Status</th>
-                                        <th className="px-5 py-3.5 font-semibold text-center">Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {shownTransactions.length === 0 ? (
+                    {shownTransactions.length === 0 ? (
+                        <div className="px-5 py-14 text-center">
+                            <span className="text-slate-400 inline-block">
+                                <IconInbox />
+                            </span>
+                            <p className="text-sm font-semibold text-slate-700 mt-3">
+                                {transactions.length === 0 ? 'Belum ada riwayat transaksi' : 'Transaksi tidak ditemukan'}
+                            </p>
+                            <p className="text-sm text-slate-600 mt-1">
+                                {transactions.length === 0 ? 'Belum ada penjualan pada periode ini.' : 'Coba ubah filter atau kata kunci.'}
+                            </p>
+                            {filtersActive && (
+                                <div className="mt-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSearch('');
+                                            setStatusFilter('all');
+                                        }}
+                                        className={btnSecondary}
+                                    >
+                                        Reset filter
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            {/* Tabel (layar lebar) */}
+                            <div className="hidden xl:block overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <caption className="sr-only">Riwayat transaksi penjualan beserta status dan aksi</caption>
+                                    <thead className="bg-slate-50 text-slate-600 text-xs">
                                         <tr>
-                                            <td colSpan="6" className="px-5 py-14 text-center">
-                                                <span className="text-slate-300 inline-block">
-                                                    <IconInbox />
-                                                </span>
-                                                <p className="text-slate-400 text-xs mt-2">
-                                                    {transactions.length === 0
-                                                        ? 'Belum ada riwayat transaksi penjualan pada periode ini.'
-                                                        : 'Tidak ada transaksi yang cocok dengan filter atau pencarian.'}
-                                                </p>
-                                            </td>
+                                            <th scope="col" className="px-5 py-3 font-semibold">Kode / tanggal</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Kasir</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Detail belanja</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Total bayar</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold text-right">
+                                                <span className="sr-only">Aksi</span>
+                                            </th>
                                         </tr>
-                                    ) : (
-                                        shownTransactions.map((trx, i) => {
+                                    </thead>
+                                    <tbody>
+                                        {shownTransactions.map((trx, i) => {
                                             const canCancel = trx.status !== 'batal' && isWithin24Hours(trx.created_at);
-                                            const details = trx.details || [];
-                                            const isOpen = !!expanded[trx.id];
-                                            const visibleDetails = isOpen ? details : details.slice(0, 2);
-                                            const hidden = details.length - 2;
                                             const disc = getDiscountInfo(trx);
-
                                             return (
                                                 <tr
                                                     key={trx.id}
                                                     style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
-                                                    className="sc-rowin border-t border-slate-100 align-top transition-colors hover:bg-slate-50"
+                                                    className="sc-rowin border-t border-slate-100 align-top transition-colors duration-150 hover:bg-slate-50"
                                                 >
                                                     <td className="px-5 py-4">
                                                         <p className="font-bold text-blue-600">{trx.invoice_code || `TRX-${trx.id}`}</p>
                                                         {disc.has && (
-                                                            <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
-                                                                <IconTag className="w-3 h-3" />
-                                                                DISKON
-                                                            </span>
+                                                            <div className="mt-1">
+                                                                <DiscountBadge />
+                                                            </div>
                                                         )}
-                                                        <p className="text-[11px] text-slate-400 mt-0.5">{new Date(trx.created_at).toLocaleString('id-ID')}</p>
+                                                        <p className="text-xs text-slate-600 mt-1">{new Date(trx.created_at).toLocaleString('id-ID')}</p>
                                                     </td>
-                                                    <td className="px-5 py-4">
+                                                    <td className="px-4 py-4">
                                                         <span className="inline-flex items-center gap-2 font-semibold text-slate-700">
-                                                            <span className="w-7 h-7 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center">
+                                                            <span aria-hidden="true" className="w-8 h-8 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">
                                                                 {(trx.user?.name || 'K').charAt(0).toUpperCase()}
                                                             </span>
                                                             {trx.user?.name || 'Kasir'}
                                                         </span>
                                                     </td>
-                                                    <td className="px-5 py-4">
-                                                        <ul className="text-xs space-y-1.5">
-                                                            {visibleDetails.map((detail) => (
-                                                                <li key={detail.id} className="flex items-start gap-2 text-slate-600">
-                                                                    <span className="mt-1.5 w-1.5 h-1.5 shrink-0 rounded-full bg-blue-400" />
-                                                                    <span>
-                                                                        {detail.product?.name || 'Produk'}{' '}
-                                                                        <span className="text-slate-400">
-                                                                            ({detail.qty} x {rp(detail.unit_price)})
-                                                                        </span>
-                                                                    </span>
-                                                                </li>
-                                                            ))}
-                                                        </ul>
-                                                        {disc.has && (
-                                                            <div className="mt-3 rounded-lg bg-emerald-50 border border-emerald-100 px-3 py-2 text-[11px] space-y-1 max-w-[260px]">
-                                                                <div className="flex justify-between gap-4 text-slate-500">
-                                                                    <span>Subtotal</span>
-                                                                    <span className="font-semibold text-slate-700">{rp(disc.subtotal)}</span>
-                                                                </div>
-                                                                <div className="flex justify-between gap-4 text-emerald-700 font-semibold">
-                                                                    <span className="inline-flex items-center gap-1">
-                                                                        <IconTag className="w-3 h-3" />
-                                                                        {disc.name || 'Diskon'}
-                                                                        {disc.label && ` (${disc.label})`}
-                                                                    </span>
-                                                                    <span>- {rp(disc.amount)}</span>
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                        {details.length > 2 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setExpanded((prev) => ({ ...prev, [trx.id]: !prev[trx.id] }))}
-                                                                className="mt-2 inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 transition"
-                                                            >
-                                                                {isOpen ? 'Sembunyikan' : `Lihat ${hidden} lainnya`}
-                                                                <span className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
-                                                                    <IconChevron />
-                                                                </span>
-                                                            </button>
-                                                        )}
+                                                    <td className="px-4 py-4">
+                                                        <TrxDetails trx={trx} disc={disc} open={!!expanded[trx.id]} onToggle={() => toggleExpanded(trx.id)} />
                                                     </td>
-                                                    <td className="px-5 py-4 whitespace-nowrap">
-                                                        {disc.has && disc.subtotal > Number(trx.total_price) && (
-                                                            <span className="block text-[11px] text-slate-400 line-through">{rp(disc.subtotal)}</span>
-                                                        )}
+                                                    <td className="px-4 py-4 whitespace-nowrap">
                                                         <span className="font-bold text-slate-800">{rp(trx.total_price)}</span>
-                                                        {disc.has && disc.amount > 0 && (
-                                                            <span className="block text-[10px] font-bold text-emerald-600 mt-0.5">Hemat {rp(disc.amount)}</span>
-                                                        )}
+                                                        {disc.has && disc.amount > 0 && <span className="block text-xs font-semibold text-emerald-700 mt-0.5">Hemat {rp(disc.amount)}</span>}
                                                     </td>
-                                                    <td className="px-5 py-4">
-                                                        <span
-                                                            className={`px-2.5 py-1 text-[11px] font-bold rounded-full ${
-                                                                trx.status === 'batal' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'
-                                                            }`}
-                                                        >
-                                                            {trx.status === 'batal' ? 'Dibatalkan' : 'Selesai'}
-                                                        </span>
+                                                    <td className="px-4 py-4">
+                                                        <StatusBadge cancelled={trx.status === 'batal'} />
                                                     </td>
-                                                    <td className="px-5 py-4 text-center">
+                                                    <td className="px-4 py-3 text-right">
                                                         {canCancel ? (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleCancelTransaction(trx)}
-                                                                disabled={cancellingId === trx.id}
-                                                                className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white transition duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                                                            >
+                                                            <button type="button" onClick={() => handleCancelTransaction(trx)} disabled={cancellingId === trx.id} className={dangerBtn}>
                                                                 {cancellingId === trx.id && <Spinner />}
                                                                 Batalkan
                                                             </button>
-                                                        ) : trx.status === 'batal' ? (
-                                                            <span className="text-xs text-slate-400 italic">Dibatalkan</span>
                                                         ) : (
-                                                            <span className="text-xs text-slate-400 font-medium" title="Pembatalan hanya bisa dalam 24 jam">
-                                                                Kedaluwarsa
-                                                            </span>
+                                                            <span className="text-sm text-slate-600">{trx.status === 'batal' ? 'Dibatalkan' : 'Lewat 24 jam'}</span>
                                                         )}
                                                     </td>
                                                 </tr>
                                             );
-                                        })
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Panel>
-                </Reveal>
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Kartu (HP & tablet): enam kolom terlalu sempit di layar kecil */}
+                            <ul role="list" className="xl:hidden divide-y divide-slate-100">
+                                {shownTransactions.map((trx, i) => {
+                                    const canCancel = trx.status !== 'batal' && isWithin24Hours(trx.created_at);
+                                    const disc = getDiscountInfo(trx);
+                                    return (
+                                        <li key={trx.id} style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }} className="sc-rowin px-4 py-4">
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="font-bold text-sm text-blue-600 break-all">{trx.invoice_code || `TRX-${trx.id}`}</p>
+                                                    <p className="text-xs text-slate-600 mt-0.5">{new Date(trx.created_at).toLocaleString('id-ID')}</p>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                                    <StatusBadge cancelled={trx.status === 'batal'} />
+                                                    {disc.has && <DiscountBadge />}
+                                                </div>
+                                            </div>
+
+                                            <p className="text-sm font-semibold text-slate-700 mt-2">Kasir: {trx.user?.name || 'Kasir'}</p>
+
+                                            <div className="mt-2">
+                                                <TrxDetails trx={trx} disc={disc} open={!!expanded[trx.id]} onToggle={() => toggleExpanded(trx.id)} />
+                                            </div>
+
+                                            <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100">
+                                                <div>
+                                                    <p className="text-xs text-slate-600">Total bayar</p>
+                                                    <p className="font-bold text-slate-900">{rp(trx.total_price)}</p>
+                                                    {disc.has && disc.amount > 0 && <p className="text-xs font-semibold text-emerald-700">Hemat {rp(disc.amount)}</p>}
+                                                </div>
+                                                {canCancel ? (
+                                                    <button type="button" onClick={() => handleCancelTransaction(trx)} disabled={cancellingId === trx.id} className={dangerBtn}>
+                                                        {cancellingId === trx.id && <Spinner />}
+                                                        Batalkan
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-sm text-slate-600">{trx.status === 'batal' ? 'Dibatalkan' : 'Lewat 24 jam'}</span>
+                                                )}
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </>
+                    )}
+                </Panel>
             </div>
 
             {/* ================= DIALOG KONFIRMASI ================= */}
             {confirmState && (
-                <div onClick={() => setConfirmState(null)} className="sc-fade fixed inset-0 z-[70] bg-slate-900/50 flex justify-center items-center p-4">
-                    <div onClick={(e) => e.stopPropagation()} className="sc-pop bg-white rounded-2xl p-6 w-full max-w-sm text-center">
-                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                <DialogShell
+                    onClose={() => setConfirmState(null)}
+                    role="alertdialog"
+                    labelledBy="judul-konfirmasi"
+                    describedBy="isi-konfirmasi"
+                    size="sm"
+                    z="z-[70]"
+                    initialFocus="cancel"
+                >
+                    <div className="p-6 text-center">
+                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center" aria-hidden="true">
                             <IconUndo className="w-5 h-5" />
                         </span>
-                        <h3 className="text-base font-bold text-slate-900 mt-4">{confirmState.title}</h3>
-                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{confirmState.message}</p>
-                        <div className="flex gap-2 mt-6">
-                            <button
-                                type="button"
-                                onClick={() => setConfirmState(null)}
-                                className="flex-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                            >
+                        <h3 id="judul-konfirmasi" className="text-base font-bold text-slate-900 mt-4">
+                            {confirmState.title}
+                        </h3>
+                        <p id="isi-konfirmasi" className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+                            {confirmState.message}
+                        </p>
+                        <div className="flex gap-2 mt-6 pb-[env(safe-area-inset-bottom)]">
+                            <button type="button" data-dialog-cancel onClick={() => setConfirmState(null)} className={`${btnSecondary} flex-1`}>
                                 Kembali
                             </button>
                             <button
@@ -888,13 +908,13 @@ export default function Index({ auth, transactions = [], totalRevenue = 0, total
                                     confirmState.onConfirm();
                                     setConfirmState(null);
                                 }}
-                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="inline-flex flex-1 items-center justify-center min-h-[44px] rounded-xl bg-red-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-red-700 active:brightness-90"
                             >
                                 {confirmState.confirmLabel}
                             </button>
                         </div>
                     </div>
-                </div>
+                </DialogShell>
             )}
         </AuthenticatedLayout>
     );

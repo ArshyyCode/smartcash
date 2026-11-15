@@ -1,23 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DialogShell from '@/Components/DialogShell';
+import Toast from '@/Components/Toast';
 import { Head, useForm, router } from '@inertiajs/react';
+
+/* ================================================================== */
+/*  Kelola Supplier                                                */
+/*  Letakkan di: resources/js/Pages/Suppliers/Index.jsx               */
+/*  Membutuhkan: Components/DialogShell.jsx dan Components/Toast.jsx   */
+/* ================================================================== */
 
 /* ================================================================== */
 /*  CSS (animasi ringan, selaras dengan halaman lain)                  */
 /* ================================================================== */
 const css = `
 @keyframes sc-rowin { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-@keyframes sc-pop { 0% { transform: scale(.94); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
-@keyframes sc-toast { from { opacity: 0; transform: translateY(-12px) scale(.96) } to { opacity: 1; transform: none } }
-@keyframes sc-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sc-pop { 0% { transform: scale(.96); opacity: 0 } 100% { transform: none; opacity: 1 } }
 @keyframes sc-spin { to { transform: rotate(360deg) } }
-.sc-rowin { animation: sc-rowin .35s cubic-bezier(.22,1,.36,1) backwards }
+.sc-rowin { animation: sc-rowin .3s cubic-bezier(.22,1,.36,1) backwards }
 .sc-pop { animation: sc-pop .2s cubic-bezier(.22,1,.36,1) backwards }
-.sc-toast { animation: sc-toast .3s cubic-bezier(.22,1,.36,1) backwards }
-.sc-fade { animation: sc-fade .2s ease backwards }
 .sc-spin { animation: sc-spin .8s linear infinite }
+.sc-noscroll::-webkit-scrollbar { display: none }
+.sc-noscroll { scrollbar-width: none }
 @media (prefers-reduced-motion: reduce) {
-    .sc-rowin, .sc-pop, .sc-toast, .sc-fade { animation: none !important }
+    .sc-rowin, .sc-pop { animation: none !important }
 }
 `;
 
@@ -36,7 +42,7 @@ const toWhatsApp = (phone) => {
 /* ================================================================== */
 /*  IKON                                                               */
 /* ================================================================== */
-const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
 
 const IconTruck = ({ className = 'w-5 h-5' }) => (
     <svg viewBox="0 0 24 24" className={className} {...ip}>
@@ -100,49 +106,104 @@ const IconPin = ({ className = 'w-4 h-4' }) => (
 /*  KOMPONEN KECIL                                                     */
 /* ================================================================== */
 const inputCls =
-    'w-full text-sm rounded-xl bg-white py-2.5 placeholder:text-slate-400 transition duration-200 focus:ring-4';
+    'w-full min-h-[44px] text-base sm:text-sm rounded-xl bg-white placeholder:text-slate-400 transition duration-150 focus:ring-4';
 const okBorder = 'border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-blue-100';
 const errBorder = 'border-red-300 focus:border-red-500 focus:ring-red-100';
+
+const btnPrimary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl bg-blue-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-blue-700 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600';
+const btnSecondary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold transition-colors duration-150 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50';
 
 const Panel = ({ children, className = '' }) => (
     <div className={`bg-white rounded-2xl border border-slate-200 ${className}`}>{children}</div>
 );
 
-const Field = ({ label, error, hint, icon, right, children }) => (
+const Field = ({ id, label, error, hint, children }) => (
     <div>
-        <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-semibold text-slate-700">{label}</label>
-            {right}
-        </div>
-        <div className="group relative">
-            {icon && (
-                <span className="pointer-events-none absolute left-3.5 top-3 text-slate-400 transition-colors group-focus-within:text-blue-600">{icon}</span>
-            )}
-            {children}
-        </div>
-        {hint && !error && <p className="text-[11px] text-slate-400 mt-1.5">{hint}</p>}
-        {error && <p className="sc-pop text-red-500 text-[11px] font-semibold mt-1.5">{error}</p>}
+        <label htmlFor={id} className="block text-sm font-semibold text-slate-700 mb-1.5">
+            {label}
+        </label>
+        {children}
+        {hint && !error && <p className="text-xs text-slate-500 mt-1.5">{hint}</p>}
+        {error && (
+            <p id={`${id}-error`} role="alert" className="sc-pop text-red-600 text-xs font-semibold mt-1.5">
+                {error}
+            </p>
+        )}
     </div>
 );
 
 const Spinner = () => (
-    <svg viewBox="0 0 24 24" className="sc-spin w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className="sc-spin w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
         <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
 );
 
-const StatChip = ({ icon, label, value, tone = 'blue' }) => {
+/* Ringkasan: satu panel, tiga kolom (lebih ringan daripada tiga kotak terpisah) */
+const SummaryStrip = ({ items }) => {
     const tones = { blue: 'bg-blue-50 text-blue-600', green: 'bg-emerald-50 text-emerald-600', slate: 'bg-slate-100 text-slate-600' };
     return (
-        <div className="h-full flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3.5 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5">
-            <span className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${tones[tone]}`}>{icon}</span>
-            <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">{label}</p>
-                <p className="text-xl font-extrabold text-slate-900 leading-tight">{value}</p>
-            </div>
+        <Panel className="grid grid-cols-1 sm:grid-cols-3 divide-y divide-slate-200 sm:divide-y-0 sm:divide-x">
+            {items.map((it) => (
+                <div key={it.label} className="flex items-center gap-3.5 p-4 sm:p-5">
+                    <span className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${tones[it.tone || 'blue']}`}>{it.icon}</span>
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-600">{it.label}</p>
+                        <p className="text-xl font-extrabold text-slate-900 leading-tight">{it.value}</p>
+                    </div>
+                </div>
+            ))}
+        </Panel>
+    );
+};
+
+/* Tombol aksi berupa ikon (44 px); nama tetap terbaca lewat aria-label.
+   Bisa berupa tombol atau tautan (href). */
+const ActionBtn = ({ label, onClick, href, external = false, tone = 'default', children }) => {
+    const cls = `w-11 h-11 shrink-0 rounded-xl flex items-center justify-center transition-colors duration-150 text-slate-600 ${
+        tone === 'danger'
+            ? 'hover:bg-red-50 hover:text-red-600 active:bg-red-100'
+            : tone === 'green'
+            ? 'hover:bg-emerald-50 hover:text-emerald-700 active:bg-emerald-100'
+            : 'hover:bg-blue-50 hover:text-blue-600 active:bg-blue-100'
+    }`;
+    if (href) {
+        return (
+            <a href={href} aria-label={label} title={label} className={cls} {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+                {children}
+            </a>
+        );
+    }
+    return (
+        <button type="button" onClick={onClick} aria-label={label} title={label} className={cls}>
+            {children}
+        </button>
+    );
+};
+
+/* Nomor telepon + tombol telepon / WhatsApp */
+const PhoneCell = ({ supplier }) => {
+    if (!supplier.phone) return <span className="text-sm text-slate-500">Belum ada nomor</span>;
+    const wa = toWhatsApp(supplier.phone);
+    return (
+        <div className="flex items-center gap-1">
+            <span className="text-sm font-medium text-slate-700 mr-1">{supplier.phone}</span>
+            <ActionBtn label={`Telepon ${supplier.name}`} href={`tel:${supplier.phone}`}>
+                <IconPhone className="w-[18px] h-[18px]" />
+            </ActionBtn>
+            <ActionBtn label={`Chat WhatsApp ${supplier.name} (tab baru)`} href={`https://wa.me/${wa}`} external tone="green">
+                <IconChat className="w-[18px] h-[18px]" />
+            </ActionBtn>
         </div>
     );
 };
+
+const Avatar = ({ name }) => (
+    <span aria-hidden="true" className="w-10 h-10 shrink-0 rounded-xl bg-blue-50 text-blue-600 text-sm font-extrabold flex items-center justify-center">
+        {(name || '?').charAt(0).toUpperCase()}
+    </span>
+);
 
 /* ================================================================== */
 /*  HALAMAN KELOLA SUPPLIER                                            */
@@ -162,29 +223,12 @@ export default function Index({ auth, suppliers = [] }) {
 
     const showToast = (type, message) => setToast({ type, message, id: Date.now() });
 
-    useEffect(() => {
-        if (!toast) return;
-        const t = setTimeout(() => setToast(null), 3200);
-        return () => clearTimeout(t);
-    }, [toast]);
-
     const closeModal = () => {
         setShowingModal(false);
         setEditingSupplier(null);
         reset();
         clearErrors();
     };
-
-    useEffect(() => {
-        const onKey = (e) => {
-            if (e.key !== 'Escape') return;
-            setConfirmState(null);
-            if (showingModal) closeModal();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showingModal]);
 
     const openModalForCreate = () => {
         setEditingSupplier(null);
@@ -241,14 +285,20 @@ export default function Index({ auth, suppliers = [] }) {
     const q = search.trim().toLowerCase();
     const shown = [...suppliers]
         .sort((a, b) => String(a.name).localeCompare(String(b.name), 'id'))
-        .filter((s) => !q || String(s.name).toLowerCase().includes(q) || String(s.phone || '').toLowerCase().includes(q) || String(s.address || '').toLowerCase().includes(q));
+        .filter(
+            (s) =>
+                !q ||
+                String(s.name).toLowerCase().includes(q) ||
+                String(s.phone || '').toLowerCase().includes(q) ||
+                String(s.address || '').toLowerCase().includes(q)
+        );
 
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
                 <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center" aria-hidden="true">
                         <IconTruck />
                     </span>
                     <h2 className="font-extrabold text-xl text-slate-900 tracking-tight leading-tight truncate">
@@ -260,285 +310,266 @@ export default function Index({ auth, suppliers = [] }) {
             <Head title="Kelola Supplier" />
             <style>{css}</style>
 
-            {/* TOAST */}
-            {toast && (
-                <div className="fixed top-20 right-4 sm:right-6 z-[60]">
-                    <div
-                        key={toast.id}
-                        className={`sc-toast flex items-start gap-3 max-w-sm rounded-2xl px-4 py-3 border text-sm font-semibold ${
-                            toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
-                        }`}
-                    >
-                        <span
-                            className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-white ${
-                                toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
-                            }`}
-                        >
-                            {toast.type === 'success' ? <IconCheck /> : <IconClose className="w-3 h-3" />}
-                        </span>
-                        <span className="leading-snug">{toast.message}</span>
-                        <button type="button" onClick={() => setToast(null)} aria-label="Tutup" className="ml-1 opacity-60 hover:opacity-100 transition">
-                            <IconClose className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <Toast toast={toast} onClose={() => setToast(null)} />
 
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-5">
                 {/* RINGKASAN */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatChip icon={<IconTruck />} label="Total Supplier" value={suppliers.length} />
-                    <StatChip icon={<IconPhone className="w-5 h-5" />} label="Punya No. Telepon" value={withPhone} tone="green" />
-                    <StatChip icon={<IconPin className="w-5 h-5" />} label="Punya Alamat" value={withAddress} tone="slate" />
-                </div>
+                <SummaryStrip
+                    items={[
+                        { icon: <IconTruck />, label: 'Total supplier', value: suppliers.length },
+                        { icon: <IconPhone className="w-5 h-5" />, label: 'Punya nomor telepon', value: withPhone, tone: 'green' },
+                        { icon: <IconPin className="w-5 h-5" />, label: 'Punya alamat', value: withAddress, tone: 'slate' },
+                    ]}
+                />
 
-                {/* TOOLBAR */}
-                <Panel className="p-5 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                    <div>
-                        <h3 className="text-base font-bold text-slate-900">Daftar Supplier Toko</h3>
-                        <p className="text-xs text-slate-500 mt-0.5">Simpan kontak pemasok agar restock barang lebih cepat.</p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                        <div className="relative flex-1 lg:w-64 min-w-[180px]">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                <IconSearch />
+                {/* DAFTAR SUPPLIER (pencarian + aksi + daftar dalam satu panel) */}
+                <Panel className="overflow-hidden">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between px-4 sm:px-5 py-4 border-b border-slate-200">
+                        <div className="flex items-center gap-3">
+                            <h3 className="font-bold text-slate-900 text-base">Daftar Supplier</h3>
+                            <span role="status" className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+                                {q ? `${shown.length} dari ${suppliers.length}` : suppliers.length}
                             </span>
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Cari nama, telepon, alamat..."
-                                className={`${inputCls} text-xs pl-9 pr-9 ${okBorder}`}
-                            />
-                            {search && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSearch('')}
-                                    aria-label="Hapus pencarian"
-                                    className="sc-pop absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition active:scale-90"
-                                >
-                                    <IconClose className="w-3 h-3" />
-                                </button>
-                            )}
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={openModalForCreate}
-                            className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition duration-200 hover:-translate-y-0.5 active:scale-95"
-                        >
-                            <IconPlus />
-                            Tambah Supplier
-                        </button>
-                    </div>
-                </Panel>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <div className="relative sm:w-72">
+                                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
+                                    <IconSearch />
+                                </span>
+                                <input
+                                    type="text"
+                                    inputMode="search"
+                                    autoComplete="off"
+                                    aria-label="Cari supplier berdasarkan nama, telepon, atau alamat"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Cari nama, telepon, alamat..."
+                                    className={`${inputCls} pl-10 pr-12 ${okBorder}`}
+                                />
+                                {search && (
+                                    <span className="absolute right-1 top-1/2 -translate-y-1/2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearch('')}
+                                            aria-label="Hapus pencarian"
+                                            className="sc-pop w-10 h-10 rounded-xl text-slate-500 hover:bg-red-100 hover:text-red-600 active:bg-red-200 flex items-center justify-center transition-colors duration-150"
+                                        >
+                                            <IconClose />
+                                        </button>
+                                    </span>
+                                )}
+                            </div>
 
-                {/* TABEL */}
-                <Panel className="overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-500 uppercase text-[11px]">
-                                <tr>
-                                    <th className="px-5 py-3.5 font-semibold w-14">No</th>
-                                    <th className="px-5 py-3.5 font-semibold">Supplier</th>
-                                    <th className="px-5 py-3.5 font-semibold">No. Telepon</th>
-                                    <th className="px-5 py-3.5 font-semibold">Alamat</th>
-                                    <th className="px-5 py-3.5 font-semibold text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {shown.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" className="px-5 py-14 text-center">
-                                            <span className="text-slate-300 inline-block">
-                                                <IconTruck className="w-10 h-10" />
-                                            </span>
-                                            <p className="text-slate-400 text-xs mt-2">
-                                                {suppliers.length === 0 ? 'Belum ada data supplier. Silakan tambahkan supplier baru.' : 'Tidak ada supplier yang cocok dengan pencarian.'}
-                                            </p>
-                                            {suppliers.length === 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={openModalForCreate}
-                                                    className="mt-4 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full transition active:scale-95"
-                                                >
-                                                    Tambah supplier pertama
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    shown.map((supplier, index) => {
-                                        const wa = toWhatsApp(supplier.phone);
-                                        return (
+                            <button type="button" onClick={openModalForCreate} className={btnPrimary}>
+                                <IconPlus />
+                                Tambah Supplier
+                            </button>
+                        </div>
+                    </div>
+
+                    {shown.length === 0 ? (
+                        <div className="px-5 py-14 text-center">
+                            <span className="text-slate-400 inline-block">
+                                <IconTruck className="w-10 h-10" />
+                            </span>
+                            <p className="text-sm font-semibold text-slate-700 mt-3">
+                                {suppliers.length === 0 ? 'Belum ada data supplier' : 'Supplier tidak ditemukan'}
+                            </p>
+                            <p className="text-sm text-slate-600 mt-1">
+                                {suppliers.length === 0 ? 'Simpan kontak pemasok agar restock barang lebih cepat.' : 'Coba kata kunci lain.'}
+                            </p>
+                            {suppliers.length === 0 && (
+                                <div className="mt-4">
+                                    <button type="button" onClick={openModalForCreate} className={btnPrimary}>
+                                        <IconPlus />
+                                        Tambah supplier pertama
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <>
+                            {/* Tabel (layar sedang ke atas) */}
+                            <div className="hidden lg:block overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <caption className="sr-only">Daftar supplier, diurutkan menurut nama</caption>
+                                    <thead className="bg-slate-50 text-slate-600 text-xs">
+                                        <tr>
+                                            <th scope="col" className="px-5 py-3 font-semibold">Supplier</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Telepon</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold hidden xl:table-cell">Alamat</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold text-right">
+                                                <span className="sr-only">Aksi</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {shown.map((supplier, index) => (
                                             <tr
                                                 key={supplier.id}
                                                 style={{ animationDelay: `${Math.min(index, 12) * 30}ms` }}
-                                                className="sc-rowin border-t border-slate-100 transition-colors hover:bg-slate-50"
+                                                className="sc-rowin border-t border-slate-100 transition-colors duration-150 hover:bg-slate-50"
                                             >
-                                                <td className="px-5 py-3.5 text-xs text-slate-400">{index + 1}</td>
-                                                <td className="px-5 py-3.5">
+                                                <td className="px-5 py-2.5">
                                                     <div className="flex items-center gap-3">
-                                                        <span className="w-9 h-9 shrink-0 rounded-xl bg-blue-50 text-blue-600 text-sm font-extrabold flex items-center justify-center">
-                                                            {(supplier.name || '?').charAt(0).toUpperCase()}
-                                                        </span>
+                                                        <Avatar name={supplier.name} />
                                                         <span className="font-bold text-slate-800 truncate max-w-[220px]">{supplier.name}</span>
                                                     </div>
                                                 </td>
-                                                <td className="px-5 py-3.5">
-                                                    {supplier.phone ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-xs font-medium text-slate-600">{supplier.phone}</span>
-                                                            <a
-                                                                href={`tel:${supplier.phone}`}
-                                                                title="Telepon"
-                                                                aria-label={`Telepon ${supplier.name}`}
-                                                                className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 flex items-center justify-center hover:bg-blue-600 hover:border-blue-600 hover:text-white transition duration-200 active:scale-90"
-                                                            >
-                                                                <IconPhone className="w-3.5 h-3.5" />
-                                                            </a>
-                                                            <a
-                                                                href={`https://wa.me/${wa}`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                title="Chat WhatsApp"
-                                                                aria-label={`Chat WhatsApp ${supplier.name}`}
-                                                                className="w-7 h-7 rounded-lg border border-slate-200 text-slate-500 flex items-center justify-center hover:bg-emerald-500 hover:border-emerald-500 hover:text-white transition duration-200 active:scale-90"
-                                                            >
-                                                                <IconChat className="w-3.5 h-3.5" />
-                                                            </a>
-                                                        </div>
-                                                    ) : (
-                                                        <span className="text-xs text-slate-300">-</span>
-                                                    )}
+                                                <td className="px-4 py-2.5">
+                                                    <PhoneCell supplier={supplier} />
                                                 </td>
-                                                <td className="px-5 py-3.5 text-xs text-slate-600 max-w-[280px]">
+                                                <td className="px-4 py-2.5 text-slate-700 max-w-[280px] hidden xl:table-cell">
                                                     <span className="line-clamp-2" title={supplier.address || ''}>
-                                                        {supplier.address || <span className="text-slate-300">-</span>}
+                                                        {supplier.address || '-'}
                                                     </span>
                                                 </td>
-                                                <td className="px-5 py-3.5">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openModalForEdit(supplier)}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-blue-600 hover:border-blue-600 hover:text-white transition duration-200 active:scale-95"
-                                                        >
-                                                            <IconEdit />
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDelete(supplier)}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white transition duration-200 active:scale-95"
-                                                        >
-                                                            <IconTrash />
-                                                            Hapus
-                                                        </button>
+                                                <td className="px-3 py-2">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <ActionBtn label={`Ubah ${supplier.name}`} onClick={() => openModalForEdit(supplier)}>
+                                                            <IconEdit className="w-[18px] h-[18px]" />
+                                                        </ActionBtn>
+                                                        <ActionBtn label={`Hapus ${supplier.name}`} tone="danger" onClick={() => handleDelete(supplier)}>
+                                                            <IconTrash className="w-[18px] h-[18px]" />
+                                                        </ActionBtn>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Kartu (HP): tidak perlu menggeser tabel ke samping */}
+                            <ul role="list" className="lg:hidden divide-y divide-slate-100">
+                                {shown.map((supplier, index) => (
+                                    <li key={supplier.id} style={{ animationDelay: `${Math.min(index, 12) * 30}ms` }} className="sc-rowin pl-4 pr-2 py-3">
+                                        <div className="flex items-start gap-3">
+                                            <Avatar name={supplier.name} />
+                                            <div className="min-w-0 flex-1 pt-0.5">
+                                                <p className="font-bold text-sm text-slate-800 leading-snug">{supplier.name}</p>
+                                                {supplier.address && <p className="text-xs text-slate-600 mt-0.5">{supplier.address}</p>}
+                                            </div>
+                                            <div className="flex shrink-0">
+                                                <ActionBtn label={`Ubah ${supplier.name}`} onClick={() => openModalForEdit(supplier)}>
+                                                    <IconEdit className="w-[18px] h-[18px]" />
+                                                </ActionBtn>
+                                                <ActionBtn label={`Hapus ${supplier.name}`} tone="danger" onClick={() => handleDelete(supplier)}>
+                                                    <IconTrash className="w-[18px] h-[18px]" />
+                                                </ActionBtn>
+                                            </div>
+                                        </div>
+                                        <div className="pl-[52px] pr-2 mt-1">
+                                            <PhoneCell supplier={supplier} />
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
+                    )}
                 </Panel>
             </div>
 
             {/* ================= MODAL TAMBAH / EDIT ================= */}
             {showingModal && (
-                <div onClick={closeModal} className="sc-fade fixed inset-0 z-50 bg-slate-900/50 flex justify-center items-center p-4">
-                    <div onClick={(e) => e.stopPropagation()} className="sc-pop bg-white p-6 rounded-2xl w-full max-w-md max-h-[92vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-5">
-                            <h3 className="text-base font-bold text-slate-900">{editingSupplier ? 'Edit Supplier' : 'Tambah Supplier Baru'}</h3>
-                            <button
-                                type="button"
-                                onClick={closeModal}
-                                aria-label="Tutup"
-                                className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition active:scale-90"
-                            >
-                                <IconClose />
-                            </button>
-                        </div>
+                <DialogShell onClose={closeModal} labelledBy="judul-modal-supplier" size="md">
+                    <div className="flex justify-between items-center gap-3 px-5 sm:px-6 py-4 border-b border-slate-200">
+                        <h3 id="judul-modal-supplier" className="text-base font-bold text-slate-900">
+                            {editingSupplier ? 'Ubah Supplier' : 'Tambah Supplier Baru'}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={closeModal}
+                            aria-label="Tutup"
+                            className="w-11 h-11 -mr-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:bg-slate-200 flex items-center justify-center transition-colors duration-150"
+                        >
+                            <IconClose />
+                        </button>
+                    </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <Field label="Nama Supplier" error={errors.name} icon={<IconTruck className="w-[18px] h-[18px]" />}>
+                    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
+                            <Field id="sup-name" label="Nama supplier" error={errors.name}>
                                 <input
+                                    id="sup-name"
+                                    data-autofocus
                                     type="text"
                                     value={data.name}
                                     onChange={(e) => setData('name', e.target.value)}
                                     placeholder="Contoh: PT Sumber Rejeki"
-                                    className={`${inputCls} pl-11 ${errors.name ? errBorder : okBorder}`}
+                                    aria-invalid={Boolean(errors.name)}
+                                    aria-describedby={errors.name ? 'sup-name-error' : undefined}
+                                    className={`${inputCls} ${errors.name ? errBorder : okBorder}`}
                                     required
-                                    autoFocus
                                 />
                             </Field>
 
-                            <Field label="No. Telepon" error={errors.phone} icon={<IconPhone className="w-[18px] h-[18px]" />} hint="Dipakai untuk tombol telepon dan WhatsApp cepat.">
+                            <Field id="sup-phone" label="No. telepon" error={errors.phone} hint="Dipakai untuk tombol telepon dan WhatsApp cepat.">
                                 <input
+                                    id="sup-phone"
                                     type="tel"
+                                    inputMode="tel"
+                                    autoComplete="off"
                                     value={data.phone}
                                     onChange={(e) => setData('phone', e.target.value)}
                                     placeholder="08xx xxxx xxxx"
-                                    className={`${inputCls} pl-11 ${errors.phone ? errBorder : okBorder}`}
+                                    aria-invalid={Boolean(errors.phone)}
+                                    aria-describedby={errors.phone ? 'sup-phone-error' : undefined}
+                                    className={`${inputCls} ${errors.phone ? errBorder : okBorder}`}
                                 />
                             </Field>
 
-                            <Field
-                                label="Alamat"
-                                error={errors.address}
-                                icon={<IconPin className="w-[18px] h-[18px]" />}
-                                right={<span className="text-[11px] text-slate-400">{data.address.length} karakter</span>}
-                            >
+                            <Field id="sup-address" label="Alamat" error={errors.address}>
                                 <textarea
+                                    id="sup-address"
                                     value={data.address}
                                     onChange={(e) => setData('address', e.target.value)}
                                     rows={3}
                                     placeholder="Alamat lengkap supplier"
-                                    className={`${inputCls} pl-11 resize-none ${errors.address ? errBorder : okBorder}`}
+                                    aria-invalid={Boolean(errors.address)}
+                                    aria-describedby={errors.address ? 'sup-address-error' : undefined}
+                                    className={`${inputCls} resize-none ${errors.address ? errBorder : okBorder}`}
                                 />
                             </Field>
+                        </div>
 
-                            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                                >
-                                    {processing && <Spinner />}
-                                    {processing ? 'Menyimpan...' : 'Simpan'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-slate-200 px-5 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <button type="button" onClick={closeModal} className={btnSecondary}>
+                                Batal
+                            </button>
+                            <button type="submit" disabled={processing} aria-busy={processing} className={btnPrimary}>
+                                {processing && <Spinner />}
+                                {processing ? 'Menyimpan...' : 'Simpan'}
+                            </button>
+                        </div>
+                    </form>
+                </DialogShell>
             )}
 
             {/* ================= DIALOG KONFIRMASI ================= */}
             {confirmState && (
-                <div onClick={() => setConfirmState(null)} className="sc-fade fixed inset-0 z-[70] bg-slate-900/50 flex justify-center items-center p-4">
-                    <div onClick={(e) => e.stopPropagation()} className="sc-pop bg-white rounded-2xl p-6 w-full max-w-sm text-center">
-                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                <DialogShell
+                    onClose={() => setConfirmState(null)}
+                    role="alertdialog"
+                    labelledBy="judul-konfirmasi"
+                    describedBy="isi-konfirmasi"
+                    size="sm"
+                    z="z-[70]"
+                    initialFocus="cancel"
+                >
+                    <div className="p-6 text-center">
+                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center" aria-hidden="true">
                             <IconTrash className="w-5 h-5" />
                         </span>
-                        <h3 className="text-base font-bold text-slate-900 mt-4">{confirmState.title}</h3>
-                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{confirmState.message}</p>
-                        <div className="flex gap-2 mt-6">
-                            <button
-                                type="button"
-                                onClick={() => setConfirmState(null)}
-                                className="flex-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                            >
+                        <h3 id="judul-konfirmasi" className="text-base font-bold text-slate-900 mt-4">
+                            {confirmState.title}
+                        </h3>
+                        <p id="isi-konfirmasi" className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+                            {confirmState.message}
+                        </p>
+                        <div className="flex gap-2 mt-6 pb-[env(safe-area-inset-bottom)]">
+                            <button type="button" data-dialog-cancel onClick={() => setConfirmState(null)} className={`${btnSecondary} flex-1`}>
                                 Batal
                             </button>
                             <button
@@ -547,13 +578,13 @@ export default function Index({ auth, suppliers = [] }) {
                                     confirmState.onConfirm();
                                     setConfirmState(null);
                                 }}
-                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="inline-flex flex-1 items-center justify-center min-h-[44px] rounded-xl bg-red-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-red-700 active:brightness-90"
                             >
                                 {confirmState.confirmLabel}
                             </button>
                         </div>
                     </div>
-                </div>
+                </DialogShell>
             )}
         </AuthenticatedLayout>
     );

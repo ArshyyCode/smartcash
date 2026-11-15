@@ -1,25 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DialogShell from '@/Components/DialogShell';
+import Toast from '@/Components/Toast';
 import { Head, useForm, router } from '@inertiajs/react';
+
+/* ================================================================== */
+/*  Manajemen User & Hak Akses                                         */
+/*  Letakkan di: resources/js/Pages/Users/Index.jsx                    */
+/*  Membutuhkan: Components/DialogShell.jsx dan Components/Toast.jsx   */
+/* ================================================================== */
 
 /* ================================================================== */
 /*  CSS (animasi ringan, selaras dengan halaman lain)                  */
 /* ================================================================== */
 const css = `
 @keyframes sc-rowin { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-@keyframes sc-pop { 0% { transform: scale(.94); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
-@keyframes sc-toast { from { opacity: 0; transform: translateY(-12px) scale(.96) } to { opacity: 1; transform: none } }
-@keyframes sc-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sc-pop { 0% { transform: scale(.96); opacity: 0 } 100% { transform: none; opacity: 1 } }
 @keyframes sc-spin { to { transform: rotate(360deg) } }
-.sc-rowin { animation: sc-rowin .35s cubic-bezier(.22,1,.36,1) backwards }
+.sc-rowin { animation: sc-rowin .3s cubic-bezier(.22,1,.36,1) backwards }
 .sc-pop { animation: sc-pop .2s cubic-bezier(.22,1,.36,1) backwards }
-.sc-toast { animation: sc-toast .3s cubic-bezier(.22,1,.36,1) backwards }
-.sc-fade { animation: sc-fade .2s ease backwards }
 .sc-spin { animation: sc-spin .8s linear infinite }
 .sc-noscroll::-webkit-scrollbar { display: none }
 .sc-noscroll { scrollbar-width: none }
 @media (prefers-reduced-motion: reduce) {
-    .sc-rowin, .sc-pop, .sc-toast, .sc-fade { animation: none !important }
+    .sc-rowin, .sc-pop { animation: none !important }
 }
 `;
 
@@ -69,7 +73,7 @@ const passwordStrength = (pw) => {
 /* ================================================================== */
 /*  IKON                                                               */
 /* ================================================================== */
-const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
 
 const IconUsers = ({ className = 'w-5 h-5' }) => (
     <svg viewBox="0 0 24 24" className={className} {...ip}>
@@ -156,46 +160,104 @@ const IconAlert = ({ className = 'w-4 h-4' }) => (
 /*  KOMPONEN KECIL                                                     */
 /* ================================================================== */
 const inputCls =
-    'w-full text-sm rounded-xl border-slate-200 bg-white placeholder:text-slate-400 transition duration-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-50 disabled:text-slate-400';
+    'w-full min-h-[44px] text-base sm:text-sm rounded-xl bg-white placeholder:text-slate-400 transition duration-150 focus:ring-4';
+const okBorder = 'border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-blue-100';
+const errBorder = 'border-red-300 focus:border-red-500 focus:ring-red-100';
+
+const btnPrimary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl bg-blue-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-blue-700 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600';
+const btnSecondary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold transition-colors duration-150 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50';
+const textBtn =
+    'inline-flex items-center gap-1.5 min-h-[44px] px-1 text-sm font-bold text-blue-600 transition-colors duration-150 hover:text-blue-800 active:opacity-70';
+const chipCls = (active) =>
+    `shrink-0 inline-flex items-center gap-2 min-h-[44px] px-4 rounded-xl border text-sm font-semibold transition-colors duration-150 ${
+        active
+            ? 'bg-blue-600 border-blue-600 text-white active:brightness-90'
+            : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50'
+    }`;
 
 const Panel = ({ children, className = '' }) => (
     <div className={`bg-white rounded-2xl border border-slate-200 ${className}`}>{children}</div>
 );
 
-const Field = ({ label, error, hint, right, children }) => (
+const Field = ({ id, label, error, hint, right, children }) => (
     <div>
-        <div className="flex items-center justify-between mb-1.5">
-            <label className="block text-xs font-semibold text-slate-700">{label}</label>
+        <div className={`flex items-center justify-between gap-3 mb-1.5 ${right ? 'min-h-[44px]' : ''}`}>
+            <label htmlFor={id} className="block text-sm font-semibold text-slate-700">
+                {label}
+            </label>
             {right}
         </div>
         {children}
-        {hint && !error && <p className="text-[10px] text-slate-400 mt-1">{hint}</p>}
-        {error && <p className="sc-pop text-red-500 text-[11px] font-semibold mt-1">{error}</p>}
+        {hint && !error && <p className="text-xs text-slate-500 mt-1.5">{hint}</p>}
+        {error && (
+            <p id={`${id}-error`} role="alert" className="sc-pop text-red-600 text-xs font-semibold mt-1.5">
+                {error}
+            </p>
+        )}
     </div>
 );
 
 const Spinner = () => (
-    <svg viewBox="0 0 24 24" className="sc-spin w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className="sc-spin w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
         <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
 );
 
-const StatChip = ({ icon, label, value, tone = 'blue' }) => {
+/* Ringkasan: satu panel, tiga kolom (lebih ringan daripada tiga kotak terpisah) */
+const SummaryStrip = ({ items }) => {
     const tones = { blue: 'bg-blue-50 text-blue-600', slate: 'bg-slate-100 text-slate-600', green: 'bg-emerald-50 text-emerald-600' };
     return (
-        <div className="h-full flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3.5 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5">
-            <span className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${tones[tone]}`}>{icon}</span>
-            <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">{label}</p>
-                <p className="text-xl font-extrabold text-slate-900 leading-tight">{value}</p>
-            </div>
-        </div>
+        <Panel className="grid grid-cols-1 sm:grid-cols-3 divide-y divide-slate-200 sm:divide-y-0 sm:divide-x">
+            {items.map((it) => (
+                <div key={it.label} className="flex items-center gap-3.5 p-4 sm:p-5">
+                    <span className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${tones[it.tone || 'blue']}`}>{it.icon}</span>
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-600">{it.label}</p>
+                        <p className="text-xl font-extrabold text-slate-900 leading-tight">{it.value}</p>
+                    </div>
+                </div>
+            ))}
+        </Panel>
     );
 };
 
+/* Tombol aksi berupa ikon (44 px); nama tetap terbaca lewat aria-label */
+const RowAction = ({ label, onClick, tone = 'default', children }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+        className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center transition-colors duration-150 text-slate-600 ${
+            tone === 'danger' ? 'hover:bg-red-50 hover:text-red-600 active:bg-red-100' : 'hover:bg-blue-50 hover:text-blue-600 active:bg-blue-100'
+        }`}
+    >
+        {children}
+    </button>
+);
+
 const Avatar = ({ user, size = 'w-10 h-10 text-sm' }) => (
-    <span className={`${size} ${roleMeta(user.role).avatar} shrink-0 rounded-full text-white font-bold flex items-center justify-center`}>
+    <span aria-hidden="true" className={`${size} ${roleMeta(user.role).avatar} shrink-0 rounded-full text-white font-bold flex items-center justify-center`}>
         {(user.name || '?').charAt(0).toUpperCase()}
+    </span>
+);
+
+const RoleBadge = ({ role }) => (
+    <span className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full ${roleMeta(role).badge}`}>{roleMeta(role).label}</span>
+);
+
+const MeBadge = () => <span className="inline-block mt-0.5 text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">Akun Anda</span>;
+
+/* Judul kelompok role (Admin / Kasir) */
+const GroupLabel = ({ group }) => (
+    <span className="inline-flex items-center gap-2 text-xs font-bold text-slate-600">
+        <span className={group.role === 'admin' ? 'text-blue-600' : 'text-emerald-700'}>
+            {group.role === 'admin' ? <IconShield className="w-4 h-4" /> : <IconCart className="w-4 h-4" />}
+        </span>
+        {roleMeta(group.role).label}
+        <span className="font-semibold text-slate-600">&middot; {group.items.length} pengguna</span>
     </span>
 );
 
@@ -224,12 +286,6 @@ export default function Index({ auth, users = [] }) {
 
     const showToast = (type, message) => setToast({ type, message, id: Date.now() });
 
-    useEffect(() => {
-        if (!toast) return;
-        const t = setTimeout(() => setToast(null), 3200);
-        return () => clearTimeout(t);
-    }, [toast]);
-
     const closeModal = () => {
         setIsModalOpen(false);
         setIsEditing(false);
@@ -238,17 +294,6 @@ export default function Index({ auth, users = [] }) {
         reset();
         clearErrors();
     };
-
-    useEffect(() => {
-        const onKey = (e) => {
-            if (e.key !== 'Escape') return;
-            setConfirmState(null);
-            if (isModalOpen) closeModal();
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isModalOpen]);
 
     const openAddModal = () => {
         setIsEditing(false);
@@ -334,15 +379,17 @@ export default function Index({ auth, users = [] }) {
 
     const editingSelf = isEditing && editId === auth.user.id;
     const strength = passwordStrength(data.password);
+    const filtersActive = Boolean(q) || roleFilter !== 'all';
 
-    let rowIndex = 0;
+    let rowIndex = 0; // jeda animasi baris tabel
+    let cardIndex = 0; // jeda animasi kartu (HP)
 
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
                 <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center" aria-hidden="true">
                         <IconUsers />
                     </span>
                     <h2 className="font-extrabold text-xl text-slate-900 tracking-tight leading-tight truncate">
@@ -354,274 +401,294 @@ export default function Index({ auth, users = [] }) {
             <Head title="Kelola User" />
             <style>{css}</style>
 
-            {/* TOAST */}
-            {toast && (
-                <div className="fixed top-20 right-4 sm:right-6 z-[60]">
-                    <div
-                        key={toast.id}
-                        className={`sc-toast flex items-start gap-3 max-w-sm rounded-2xl px-4 py-3 border text-sm font-semibold ${
-                            toast.type === 'success'
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                : 'bg-red-50 border-red-200 text-red-800'
-                        }`}
-                    >
-                        <span
-                            className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-white ${
-                                toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
-                            }`}
-                        >
-                            {toast.type === 'success' ? <IconCheck /> : <IconClose className="w-3 h-3" />}
-                        </span>
-                        <span className="leading-snug">{toast.message}</span>
-                        <button type="button" onClick={() => setToast(null)} aria-label="Tutup" className="ml-1 opacity-60 hover:opacity-100 transition">
-                            <IconClose className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <Toast toast={toast} onClose={() => setToast(null)} />
 
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-5">
                 {/* RINGKASAN */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <StatChip icon={<IconUsers />} label="Total Pengguna" value={users.length} />
-                    <StatChip icon={<IconShield />} label="Admin" value={adminCount} />
-                    <StatChip icon={<IconCart />} label="Kasir" value={kasirCount} tone="green" />
-                </div>
+                <SummaryStrip
+                    items={[
+                        { icon: <IconUsers />, label: 'Total pengguna', value: users.length },
+                        { icon: <IconShield />, label: 'Admin', value: adminCount },
+                        { icon: <IconCart />, label: 'Kasir', value: kasirCount, tone: 'green' },
+                    ]}
+                />
 
-                {/* TOOLBAR */}
-                <Panel className="p-5 space-y-4">
-                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                        <div>
-                            <h3 className="text-base font-bold text-slate-900">Daftar Pengguna Aplikasi</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">Kelola data admin dan kasir yang berhak mengakses akun toko Anda.</p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                            <div className="relative flex-1 lg:w-64 min-w-[180px]">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                    <IconSearch />
-                                </span>
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Cari nama, username, email..."
-                                    className={`${inputCls} text-xs pl-9 pr-9 py-2.5`}
-                                />
-                                {search && (
+                {/* PENCARIAN, AKSI, DAN FILTER ROLE */}
+                <Panel className="p-4 sm:p-5 space-y-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                        <div className="relative flex-1">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
+                                <IconSearch />
+                            </span>
+                            <input
+                                type="text"
+                                inputMode="search"
+                                autoComplete="off"
+                                aria-label="Cari pengguna berdasarkan nama, username, atau email"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Cari nama, username, email..."
+                                className={`${inputCls} pl-10 pr-12 ${okBorder}`}
+                            />
+                            {search && (
+                                <span className="absolute right-1 top-1/2 -translate-y-1/2">
                                     <button
                                         type="button"
                                         onClick={() => setSearch('')}
                                         aria-label="Hapus pencarian"
-                                        className="sc-pop absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition active:scale-90"
+                                        className="sc-pop w-10 h-10 rounded-xl text-slate-500 hover:bg-red-100 hover:text-red-600 active:bg-red-200 flex items-center justify-center transition-colors duration-150"
                                     >
-                                        <IconClose className="w-3 h-3" />
+                                        <IconClose />
                                     </button>
-                                )}
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={openAddModal}
-                                className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition duration-200 hover:-translate-y-0.5 active:scale-95"
-                            >
-                                <IconPlus />
-                                Tambah User Baru
-                            </button>
+                                </span>
+                            )}
                         </div>
+
+                        <button type="button" onClick={openAddModal} className={`${btnPrimary} shrink-0`}>
+                            <IconPlus />
+                            Tambah User Baru
+                        </button>
                     </div>
 
-                    <div className="sc-noscroll flex gap-2 overflow-x-auto">
+                    <div role="group" aria-label="Filter role" className="sc-noscroll flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
                         {tabs.map((tab) => {
                             const active = roleFilter === tab.key;
                             return (
-                                <button
-                                    key={tab.key}
-                                    type="button"
-                                    onClick={() => setRoleFilter(tab.key)}
-                                    aria-pressed={active}
-                                    className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition duration-200 active:scale-95 ${
-                                        active
-                                            ? 'bg-blue-600 border-blue-600 text-white'
-                                            : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5'
-                                    }`}
-                                >
+                                <button key={tab.key} type="button" onClick={() => setRoleFilter(tab.key)} aria-pressed={active} className={chipCls(active)}>
                                     {tab.label}
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                        {tab.n}
-                                    </span>
+                                    <span className={`text-xs font-bold px-1.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>{tab.n}</span>
                                 </button>
                             );
                         })}
                     </div>
                 </Panel>
 
-                {/* TABEL USER (ADMIN DI ATAS, LALU KASIR) */}
+                {/* DAFTAR USER (ADMIN DI ATAS, LALU KASIR) */}
                 <Panel className="overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-500 uppercase text-[11px]">
-                                <tr>
-                                    <th className="px-5 py-3.5 font-semibold">Pengguna</th>
-                                    <th className="px-5 py-3.5 font-semibold">Username &amp; Email</th>
-                                    <th className="px-5 py-3.5 font-semibold">Role</th>
-                                    <th className="px-5 py-3.5 font-semibold text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {shown.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="4" className="px-5 py-14 text-center">
-                                            <span className="text-slate-300 inline-block">
-                                                <IconUsers className="w-10 h-10" />
-                                            </span>
-                                            <p className="text-slate-400 text-xs mt-2">
-                                                {users.length === 0 ? 'Belum ada data user.' : 'Tidak ada user yang cocok dengan filter atau pencarian.'}
-                                            </p>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    groups.map((group) => (
-                                        <React.Fragment key={group.role}>
-                                            {roleFilter === 'all' && (
-                                                <tr className="bg-slate-50/70 border-t border-slate-100">
-                                                    <td colSpan="4" className="px-5 py-2">
-                                                        <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-slate-500">
-                                                            <span className={group.role === 'admin' ? 'text-blue-600' : 'text-emerald-600'}>
-                                                                {group.role === 'admin' ? <IconShield className="w-4 h-4" /> : <IconCart className="w-4 h-4" />}
-                                                            </span>
-                                                            {roleMeta(group.role).label}
-                                                            <span className="text-slate-400 font-semibold normal-case">&middot; {group.items.length} pengguna</span>
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            )}
+                    <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-slate-200">
+                        <h3 className="font-bold text-slate-900 text-base">Daftar Pengguna Aplikasi</h3>
+                        <span role="status" className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+                            {filtersActive ? `${shown.length} dari ${users.length}` : users.length}
+                        </span>
+                    </div>
 
-                                            {group.items.map((u) => {
-                                                const isMe = auth.user.id === u.id;
-                                                const delay = Math.min(rowIndex++, 12) * 30;
-                                                return (
-                                                    <tr
-                                                        key={u.id}
-                                                        style={{ animationDelay: `${delay}ms` }}
-                                                        className="sc-rowin border-t border-slate-100 transition-colors hover:bg-slate-50"
-                                                    >
-                                                        <td className="px-5 py-3.5">
-                                                            <div className="flex items-center gap-3">
-                                                                <Avatar user={u} />
-                                                                <div className="min-w-0">
-                                                                    <p className="font-bold text-slate-800 truncate max-w-[220px]">{u.name}</p>
-                                                                    {isMe && (
-                                                                        <span className="inline-block mt-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
-                                                                            Akun Anda
-                                                                        </span>
+                    {shown.length === 0 ? (
+                        <div className="px-5 py-14 text-center">
+                            <span className="text-slate-400 inline-block">
+                                <IconUsers className="w-10 h-10" />
+                            </span>
+                            <p className="text-sm font-semibold text-slate-700 mt-3">{users.length === 0 ? 'Belum ada data user' : 'User tidak ditemukan'}</p>
+                            <p className="text-sm text-slate-600 mt-1">{users.length === 0 ? 'Tambahkan admin atau kasir pertama Anda.' : 'Coba ubah filter atau kata kunci.'}</p>
+                            <div className="mt-4">
+                                {users.length === 0 ? (
+                                    <button type="button" onClick={openAddModal} className={btnPrimary}>
+                                        <IconPlus />
+                                        Tambah User Baru
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSearch('');
+                                            setRoleFilter('all');
+                                        }}
+                                        className={btnSecondary}
+                                    >
+                                        Reset filter
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Tabel (layar lebar) */}
+                            <div className="hidden lg:block overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <caption className="sr-only">Daftar pengguna, admin di atas lalu kasir</caption>
+                                    <thead className="bg-slate-50 text-slate-600 text-xs">
+                                        <tr>
+                                            <th scope="col" className="px-5 py-3 font-semibold">Pengguna</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Username &amp; email</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Role</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold text-right">
+                                                <span className="sr-only">Aksi</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {groups.map((group) => (
+                                            <React.Fragment key={group.role}>
+                                                {roleFilter === 'all' && (
+                                                    <tr className="bg-slate-50 border-t border-slate-100">
+                                                        <th scope="colgroup" colSpan="4" className="px-5 py-2 text-left font-normal">
+                                                            <GroupLabel group={group} />
+                                                        </th>
+                                                    </tr>
+                                                )}
+                                                {group.items.map((u) => {
+                                                    const isMe = auth.user.id === u.id;
+                                                    const delay = Math.min(rowIndex++, 12) * 30;
+                                                    return (
+                                                        <tr
+                                                            key={u.id}
+                                                            style={{ animationDelay: `${delay}ms` }}
+                                                            className="sc-rowin border-t border-slate-100 transition-colors duration-150 hover:bg-slate-50"
+                                                        >
+                                                            <td className="px-5 py-2.5">
+                                                                <div className="flex items-center gap-3">
+                                                                    <Avatar user={u} />
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-bold text-slate-800 truncate max-w-[220px]">{u.name}</p>
+                                                                        {isMe && <MeBadge />}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <p className="font-semibold text-slate-700">@{u.username || '-'}</p>
+                                                                <p className="text-xs text-slate-600">{u.email}</p>
+                                                            </td>
+                                                            <td className="px-4 py-2.5">
+                                                                <RoleBadge role={u.role} />
+                                                            </td>
+                                                            <td className="px-3 py-2">
+                                                                <div className="flex items-center justify-end gap-1">
+                                                                    <RowAction label={`Ubah ${u.name}`} onClick={() => handleEdit(u)}>
+                                                                        <IconEdit className="w-[18px] h-[18px]" />
+                                                                    </RowAction>
+                                                                    {!isMe && (
+                                                                        <RowAction label={`Hapus ${u.name}`} tone="danger" onClick={() => handleDelete(u)}>
+                                                                            <IconTrash className="w-[18px] h-[18px]" />
+                                                                        </RowAction>
                                                                     )}
                                                                 </div>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </React.Fragment>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Kartu (HP & tablet): tidak perlu menggeser tabel ke samping */}
+                            <div className="lg:hidden">
+                                {groups.map((group) => (
+                                    <section key={group.role} aria-label={`${roleMeta(group.role).label}, ${group.items.length} pengguna`}>
+                                        {roleFilter === 'all' && (
+                                            <div className="bg-slate-50 border-t border-slate-100 px-4 py-2">
+                                                <GroupLabel group={group} />
+                                            </div>
+                                        )}
+                                        <ul role="list" className="divide-y divide-slate-100 border-t border-slate-100">
+                                            {group.items.map((u) => {
+                                                const isMe = auth.user.id === u.id;
+                                                return (
+                                                    <li key={u.id} style={{ animationDelay: `${Math.min(cardIndex++, 12) * 30}ms` }} className="sc-rowin flex items-start gap-3 pl-4 pr-2 py-3">
+                                                        <Avatar user={u} />
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-bold text-sm text-slate-800 leading-snug">{u.name}</p>
+                                                            <p className="text-xs font-semibold text-slate-700 mt-0.5">@{u.username || '-'}</p>
+                                                            <p className="text-xs text-slate-600 break-all">{u.email}</p>
+                                                            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                                                <RoleBadge role={u.role} />
+                                                                {isMe && <MeBadge />}
                                                             </div>
-                                                        </td>
-                                                        <td className="px-5 py-3.5">
-                                                            <p className="font-semibold text-slate-700">@{u.username || '-'}</p>
-                                                            <p className="text-xs text-slate-400">{u.email}</p>
-                                                        </td>
-                                                        <td className="px-5 py-3.5">
-                                                            <span className={`px-2.5 py-1 text-[10px] font-extrabold rounded-full ${roleMeta(u.role).badge}`}>
-                                                                {String(u.role).toUpperCase()}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-5 py-3.5">
-                                                            <div className="flex items-center justify-center gap-2">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleEdit(u)}
-                                                                    className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-blue-600 hover:border-blue-600 hover:text-white transition duration-200 active:scale-95"
-                                                                >
-                                                                    <IconEdit />
-                                                                    Edit
-                                                                </button>
-                                                                {!isMe && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleDelete(u)}
-                                                                        className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white transition duration-200 active:scale-95"
-                                                                    >
-                                                                        <IconTrash />
-                                                                        Hapus
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
+                                                        </div>
+                                                        <div className="flex shrink-0">
+                                                            <RowAction label={`Ubah ${u.name}`} onClick={() => handleEdit(u)}>
+                                                                <IconEdit className="w-[18px] h-[18px]" />
+                                                            </RowAction>
+                                                            {!isMe && (
+                                                                <RowAction label={`Hapus ${u.name}`} tone="danger" onClick={() => handleDelete(u)}>
+                                                                    <IconTrash className="w-[18px] h-[18px]" />
+                                                                </RowAction>
+                                                            )}
+                                                        </div>
+                                                    </li>
                                                 );
                                             })}
-                                        </React.Fragment>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                        </ul>
+                                    </section>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </Panel>
             </div>
 
             {/* ================= MODAL TAMBAH / EDIT USER ================= */}
             {isModalOpen && (
-                <div onClick={closeModal} className="sc-fade fixed inset-0 z-50 bg-slate-900/50 flex justify-center items-center p-4">
-                    <div onClick={(e) => e.stopPropagation()} className="sc-pop bg-white p-6 rounded-2xl w-full max-w-md max-h-[92vh] overflow-y-auto">
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-                            <h3 className="text-base font-bold text-slate-900">{isEditing ? 'Edit Data User' : 'Tambah User Baru'}</h3>
-                            <button
-                                type="button"
-                                onClick={closeModal}
-                                aria-label="Tutup"
-                                className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition active:scale-90"
-                            >
-                                <IconClose />
-                            </button>
-                        </div>
+                <DialogShell onClose={closeModal} labelledBy="judul-modal-user" size="md">
+                    <div className="flex justify-between items-center gap-3 px-5 sm:px-6 py-4 border-b border-slate-200">
+                        <h3 id="judul-modal-user" className="text-base font-bold text-slate-900">
+                            {isEditing ? 'Ubah Data User' : 'Tambah User Baru'}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={closeModal}
+                            aria-label="Tutup"
+                            className="w-11 h-11 -mr-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:bg-slate-200 flex items-center justify-center transition-colors duration-150"
+                        >
+                            <IconClose />
+                        </button>
+                    </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <Field label="Nama Lengkap" error={errors.name}>
+                    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-4">
+                            <Field id="user-name" label="Nama lengkap" error={errors.name}>
                                 <input
+                                    id="user-name"
+                                    data-autofocus
                                     type="text"
                                     value={data.name}
                                     onChange={(e) => setData('name', e.target.value)}
-                                    className={`${inputCls} py-2.5`}
+                                    className={`${inputCls} ${errors.name ? errBorder : okBorder}`}
                                     placeholder="Masukkan nama pengguna"
+                                    autoComplete="off"
+                                    aria-invalid={Boolean(errors.name)}
+                                    aria-describedby={errors.name ? 'user-name-error' : undefined}
                                     required
                                 />
                             </Field>
 
-                            <Field label="Username" error={errors.username} hint="Dipakai untuk login. Gunakan huruf kecil tanpa spasi.">
+                            <Field id="user-username" label="Username" error={errors.username} hint="Dipakai untuk masuk. Gunakan huruf kecil tanpa spasi.">
                                 <div className="relative">
-                                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">@</span>
+                                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500">@</span>
                                     <input
+                                        id="user-username"
                                         type="text"
                                         value={data.username}
                                         onChange={(e) => setData('username', e.target.value)}
-                                        className={`${inputCls} py-2.5 pl-8`}
+                                        className={`${inputCls} pl-8 ${errors.username ? errBorder : okBorder}`}
                                         placeholder="kasir1"
+                                        autoComplete="off"
+                                        autoCapitalize="none"
+                                        aria-invalid={Boolean(errors.username)}
+                                        aria-describedby={errors.username ? 'user-username-error' : undefined}
                                         required
                                     />
                                 </div>
                             </Field>
 
-                            <Field label="Email" error={errors.email}>
+                            <Field id="user-email" label="Email" error={errors.email}>
                                 <input
+                                    id="user-email"
                                     type="email"
                                     value={data.email}
                                     onChange={(e) => setData('email', e.target.value)}
-                                    className={`${inputCls} py-2.5`}
+                                    className={`${inputCls} ${errors.email ? errBorder : okBorder}`}
                                     placeholder="email@domain.com"
+                                    autoComplete="off"
+                                    aria-invalid={Boolean(errors.email)}
+                                    aria-describedby={errors.email ? 'user-email-error' : undefined}
                                     required
                                 />
                             </Field>
 
                             <Field
-                                label={
-                                    <>
-                                        Password{' '}
-                                        {isEditing && <span className="text-[10px] text-slate-400 font-normal">(Kosongkan jika tidak diubah)</span>}
-                                    </>
-                                }
+                                id="user-password"
+                                label={isEditing ? 'Kata sandi (kosongkan jika tidak diubah)' : 'Kata sandi'}
                                 error={errors.password}
                                 right={
                                     <button
@@ -630,45 +697,54 @@ export default function Index({ auth, users = [] }) {
                                             setData('password', randomPassword());
                                             setShowPassword(true);
                                         }}
-                                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 transition active:scale-95"
+                                        className={textBtn}
                                     >
-                                        <IconDice />
+                                        <IconDice className="w-4 h-4" />
                                         Buat acak
                                     </button>
                                 }
                             >
                                 <div className="relative">
                                     <input
+                                        id="user-password"
                                         type={showPassword ? 'text' : 'password'}
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
-                                        className={`${inputCls} py-2.5 pr-11`}
+                                        className={`${inputCls} pr-14 ${errors.password ? errBorder : okBorder}`}
                                         placeholder="Minimal 8 karakter"
                                         autoComplete="new-password"
+                                        aria-invalid={Boolean(errors.password)}
+                                        aria-describedby={errors.password ? 'user-password-error' : undefined}
                                         required={!isEditing}
                                     />
                                     <button
                                         type="button"
                                         onClick={() => setShowPassword((v) => !v)}
-                                        aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition active:scale-90"
+                                        aria-label={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                                        aria-pressed={showPassword}
+                                        className="absolute right-0.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:bg-slate-200 flex items-center justify-center transition-colors duration-150"
                                     >
                                         {showPassword ? <IconEyeOff /> : <IconEye />}
                                     </button>
                                 </div>
                                 {strength && (
-                                    <div className="sc-pop mt-2">
-                                        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                                    <div className="sc-pop mt-2.5">
+                                        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden" role="presentation">
                                             <div className={`h-full rounded-full transition-all duration-300 ${strength.bar} ${strength.w}`} />
                                         </div>
-                                        <p className={`text-[11px] font-semibold mt-1 ${strength.text}`}>Kekuatan password: {strength.label}</p>
+                                        <p aria-live="polite" className={`text-xs font-semibold mt-1.5 ${strength.text}`}>
+                                            Kekuatan kata sandi: {strength.label}
+                                        </p>
                                     </div>
                                 )}
                             </Field>
 
                             {/* role sebagai pilihan kartu */}
-                            <Field label="Role / Hak Akses" error={errors.role}>
-                                <div className="grid grid-cols-2 gap-2.5">
+                            <div>
+                                <p id="user-role-label" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Role / hak akses
+                                </p>
+                                <div role="radiogroup" aria-labelledby="user-role-label" className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                     {[
                                         { v: 'kasir', title: 'Kasir', desc: 'Akses POS dan transaksi penjualan.', icon: <IconCart /> },
                                         { v: 'admin', title: 'Admin', desc: 'Akses penuh: produk, laporan, dan staf.', icon: <IconShield /> },
@@ -678,69 +754,80 @@ export default function Index({ auth, users = [] }) {
                                             <button
                                                 key={opt.v}
                                                 type="button"
+                                                role="radio"
+                                                aria-checked={active}
                                                 disabled={editingSelf}
                                                 onClick={() => setData('role', opt.v)}
-                                                aria-pressed={active}
-                                                className={`text-left rounded-xl border p-3 transition duration-200 active:scale-[.98] disabled:cursor-not-allowed disabled:opacity-60 ${
-                                                    active ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-blue-300'
+                                                className={`relative text-left rounded-xl border p-3.5 min-h-[44px] transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                                    active ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-blue-300 active:bg-blue-50'
                                                 }`}
                                             >
-                                                <span className={`flex items-center gap-2 text-xs font-bold ${active ? 'text-blue-700' : 'text-slate-700'}`}>
+                                                <span className={`flex items-center gap-2 text-sm font-bold ${active ? 'text-blue-700' : 'text-slate-700'}`}>
                                                     {opt.icon}
                                                     {opt.title}
                                                 </span>
-                                                <span className="block text-[10px] text-slate-500 mt-1 leading-snug">{opt.desc}</span>
+                                                <span className="block text-xs text-slate-600 mt-1 leading-snug">{opt.desc}</span>
+                                                {active && (
+                                                    <span className="absolute top-3 right-3 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center" aria-hidden="true">
+                                                        <IconCheck />
+                                                    </span>
+                                                )}
                                             </button>
                                         );
                                     })}
                                 </div>
+                                {errors.role && (
+                                    <p role="alert" className="sc-pop text-red-600 text-xs font-semibold mt-1.5">
+                                        {errors.role}
+                                    </p>
+                                )}
                                 {editingSelf && (
-                                    <p className="flex items-start gap-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-2 mt-2">
+                                    <p className="flex items-start gap-2 text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5 mt-2.5">
                                         <span className="mt-0.5 shrink-0">
-                                            <IconAlert className="w-3.5 h-3.5" />
+                                            <IconAlert className="w-4 h-4" />
                                         </span>
                                         Role akun Anda sendiri dikunci agar Anda tidak kehilangan akses admin.
                                     </p>
                                 )}
-                            </Field>
-
-                            <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-                                <button
-                                    type="button"
-                                    onClick={closeModal}
-                                    className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                                >
-                                    {processing && <Spinner />}
-                                    {processing ? 'Menyimpan...' : isEditing ? 'Simpan Perubahan' : 'Tambah User'}
-                                </button>
                             </div>
-                        </form>
-                    </div>
-                </div>
+                        </div>
+
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-slate-200 px-5 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <button type="button" onClick={closeModal} className={btnSecondary}>
+                                Batal
+                            </button>
+                            <button type="submit" disabled={processing} aria-busy={processing} className={btnPrimary}>
+                                {processing && <Spinner />}
+                                {processing ? 'Menyimpan...' : isEditing ? 'Simpan Perubahan' : 'Tambah User'}
+                            </button>
+                        </div>
+                    </form>
+                </DialogShell>
             )}
 
             {/* ================= DIALOG KONFIRMASI ================= */}
             {confirmState && (
-                <div onClick={() => setConfirmState(null)} className="sc-fade fixed inset-0 z-[70] bg-slate-900/50 flex justify-center items-center p-4">
-                    <div onClick={(e) => e.stopPropagation()} className="sc-pop bg-white rounded-2xl p-6 w-full max-w-sm text-center">
-                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                <DialogShell
+                    onClose={() => setConfirmState(null)}
+                    role="alertdialog"
+                    labelledBy="judul-konfirmasi"
+                    describedBy="isi-konfirmasi"
+                    size="sm"
+                    z="z-[70]"
+                    initialFocus="cancel"
+                >
+                    <div className="p-6 text-center">
+                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center" aria-hidden="true">
                             <IconTrash className="w-5 h-5" />
                         </span>
-                        <h3 className="text-base font-bold text-slate-900 mt-4">{confirmState.title}</h3>
-                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{confirmState.message}</p>
-                        <div className="flex gap-2 mt-6">
-                            <button
-                                type="button"
-                                onClick={() => setConfirmState(null)}
-                                className="flex-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                            >
+                        <h3 id="judul-konfirmasi" className="text-base font-bold text-slate-900 mt-4">
+                            {confirmState.title}
+                        </h3>
+                        <p id="isi-konfirmasi" className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+                            {confirmState.message}
+                        </p>
+                        <div className="flex gap-2 mt-6 pb-[env(safe-area-inset-bottom)]">
+                            <button type="button" data-dialog-cancel onClick={() => setConfirmState(null)} className={`${btnSecondary} flex-1`}>
                                 Batal
                             </button>
                             <button
@@ -749,13 +836,13 @@ export default function Index({ auth, users = [] }) {
                                     confirmState.onConfirm();
                                     setConfirmState(null);
                                 }}
-                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="inline-flex flex-1 items-center justify-center min-h-[44px] rounded-xl bg-red-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-red-700 active:brightness-90"
                             >
                                 {confirmState.confirmLabel}
                             </button>
                         </div>
                     </div>
-                </div>
+                </DialogShell>
             )}
         </AuthenticatedLayout>
     );

@@ -1,25 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DialogShell from '@/Components/DialogShell';
+import Toast from '@/Components/Toast';
 import { Head, useForm, router } from '@inertiajs/react';
+
+/* ================================================================== */
+/*  Kelola Diskon & Promo                                          */
+/*  Letakkan di: resources/js/Pages/Discounts/Index.jsx               */
+/*  Membutuhkan: Components/DialogShell.jsx dan Components/Toast.jsx   */
+/* ================================================================== */
 
 /* ================================================================== */
 /*  CSS (animasi ringan, selaras dengan halaman lain)                  */
 /* ================================================================== */
 const css = `
 @keyframes sc-rowin { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-@keyframes sc-pop { 0% { transform: scale(.94); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
-@keyframes sc-toast { from { opacity: 0; transform: translateY(-12px) scale(.96) } to { opacity: 1; transform: none } }
-@keyframes sc-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sc-pop { 0% { transform: scale(.96); opacity: 0 } 100% { transform: none; opacity: 1 } }
 @keyframes sc-spin { to { transform: rotate(360deg) } }
-.sc-rowin { animation: sc-rowin .35s cubic-bezier(.22,1,.36,1) backwards }
+.sc-rowin { animation: sc-rowin .3s cubic-bezier(.22,1,.36,1) backwards }
 .sc-pop { animation: sc-pop .2s cubic-bezier(.22,1,.36,1) backwards }
-.sc-toast { animation: sc-toast .3s cubic-bezier(.22,1,.36,1) backwards }
-.sc-fade { animation: sc-fade .2s ease backwards }
 .sc-spin { animation: sc-spin .8s linear infinite }
 .sc-noscroll::-webkit-scrollbar { display: none }
 .sc-noscroll { scrollbar-width: none }
 @media (prefers-reduced-motion: reduce) {
-    .sc-rowin, .sc-pop, .sc-toast, .sc-fade { animation: none !important }
+    .sc-rowin, .sc-pop { animation: none !important }
 }
 `;
 
@@ -69,7 +73,7 @@ const getStatus = (d) => {
 const STATUS_STYLE = {
     berlaku: { label: 'Berlaku', cls: 'bg-emerald-100 text-emerald-700' },
     akan: { label: 'Akan Datang', cls: 'bg-blue-100 text-blue-700' },
-    nonaktif: { label: 'Nonaktif', cls: 'bg-slate-100 text-slate-500' },
+    nonaktif: { label: 'Nonaktif', cls: 'bg-slate-100 text-slate-600' },
     berakhir: { label: 'Berakhir', cls: 'bg-red-100 text-red-700' },
 };
 
@@ -93,7 +97,7 @@ const discountLabel = (d) => (d.type === 'percentage' ? `${Number(d.value)}%` : 
 /* ================================================================== */
 /*  IKON                                                               */
 /* ================================================================== */
-const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
 
 const IconTag = ({ className = 'w-5 h-5' }) => (
     <svg viewBox="0 0 24 24" className={className} {...ip}>
@@ -168,65 +172,106 @@ const IconInfo = ({ className = 'w-4 h-4' }) => (
 /*  KOMPONEN KECIL                                                     */
 /* ================================================================== */
 const inputCls =
-    'w-full text-sm rounded-xl border-slate-200 bg-white placeholder:text-slate-400 transition duration-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100';
+    'w-full min-h-[44px] text-base sm:text-sm rounded-xl bg-white placeholder:text-slate-400 transition duration-150 focus:ring-4';
+const okBorder = 'border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-blue-100';
+const errBorder = 'border-red-300 focus:border-red-500 focus:ring-red-100';
+
+const btnPrimary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl bg-blue-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-blue-700 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600';
+const btnSecondary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold transition-colors duration-150 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50';
+/* chip pilihan cepat (nilai potongan, durasi) */
+const chipCls = (active) =>
+    `inline-flex items-center justify-center min-h-[44px] px-4 rounded-xl border text-sm font-bold transition-colors duration-150 ${
+        active
+            ? 'bg-blue-600 border-blue-600 text-white active:brightness-90'
+            : 'bg-white border-slate-200 text-slate-700 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50'
+    }`;
 
 const Panel = ({ children, className = '' }) => (
     <div className={`bg-white rounded-2xl border border-slate-200 ${className}`}>{children}</div>
 );
 
-const Field = ({ label, error, hint, children }) => (
+const Field = ({ id, label, error, hint, children }) => (
     <div>
-        <label className="block text-xs font-semibold text-slate-700 mb-1.5">{label}</label>
+        <label htmlFor={id} className="block text-sm font-semibold text-slate-700 mb-1.5">
+            {label}
+        </label>
         {children}
-        {hint && !error && <p className="text-[10px] text-slate-400 mt-1">{hint}</p>}
-        {error && <p className="sc-pop text-red-500 text-[11px] font-semibold mt-1">{error}</p>}
+        {hint && !error && <p className="text-xs text-slate-500 mt-1.5">{hint}</p>}
+        {error && (
+            <p id={`${id}-error`} role="alert" className="sc-pop text-red-600 text-xs font-semibold mt-1.5">
+                {error}
+            </p>
+        )}
     </div>
 );
 
 const Spinner = () => (
-    <svg viewBox="0 0 24 24" className="sc-spin w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className="sc-spin w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
         <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
 );
 
-const StatChip = ({ icon, label, value, tone = 'blue' }) => {
-    const tones = {
-        blue: 'bg-blue-50 text-blue-600',
-        green: 'bg-emerald-50 text-emerald-600',
-        slate: 'bg-slate-100 text-slate-600',
-        red: 'bg-red-50 text-red-600',
-    };
+/* Ringkasan: satu panel, kolom dipisah garis tipis (lebih ringan daripada empat kotak) */
+const SummaryStrip = ({ items }) => {
+    const tones = { blue: 'bg-blue-50 text-blue-600', green: 'bg-emerald-50 text-emerald-600', slate: 'bg-slate-100 text-slate-600' };
     return (
-        <div className="h-full flex items-center gap-3 bg-white rounded-2xl border border-slate-200 px-4 py-3.5 transition duration-200 hover:border-blue-300 hover:-translate-y-0.5">
-            <span className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center ${tones[tone]}`}>{icon}</span>
-            <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide truncate">{label}</p>
-                <p className="text-xl font-extrabold text-slate-900 leading-tight">{value}</p>
-            </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-200">
+            {items.map((it) => (
+                <div key={it.label} className="flex items-center gap-3.5 bg-white p-4 sm:p-5">
+                    <span className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center ${tones[it.tone || 'blue']}`}>{it.icon}</span>
+                    <div className="min-w-0">
+                        <p className="text-xs font-semibold text-slate-600">{it.label}</p>
+                        <p className="text-xl font-extrabold text-slate-900 leading-tight">{it.value}</p>
+                    </div>
+                </div>
+            ))}
         </div>
     );
 };
 
-/* Saklar aktif / nonaktif */
+/* Tombol aksi berupa ikon (44 px); nama tetap terbaca lewat aria-label */
+const RowAction = ({ label, onClick, tone = 'default', children }) => (
+    <button
+        type="button"
+        onClick={onClick}
+        aria-label={label}
+        title={label}
+        className={`w-11 h-11 shrink-0 rounded-xl flex items-center justify-center transition-colors duration-150 text-slate-600 ${
+            tone === 'danger' ? 'hover:bg-red-50 hover:text-red-600 active:bg-red-100' : 'hover:bg-blue-50 hover:text-blue-600 active:bg-blue-100'
+        }`}
+    >
+        {children}
+    </button>
+);
+
+/* Saklar aktif / nonaktif: area sentuh 44 px, status juga tertulis di lencana sebelahnya */
 const Switch = ({ checked, onChange, label, disabled = false }) => (
     <button
         type="button"
         role="switch"
         aria-checked={checked}
         aria-label={label}
+        aria-busy={disabled || undefined}
         disabled={disabled}
         onClick={onChange}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:opacity-50 ${
-            checked ? 'bg-blue-600' : 'bg-slate-300'
-        }`}
+        className="inline-flex h-11 w-14 shrink-0 items-center justify-center rounded-full disabled:opacity-50 disabled:cursor-not-allowed"
     >
-        <span
-            className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform duration-200 ${
-                checked ? 'translate-x-[22px]' : 'translate-x-0.5'
-            }`}
-        />
+        <span className={`relative block h-6 w-11 rounded-full transition-colors duration-150 ${checked ? 'bg-blue-600' : 'bg-slate-400'}`}>
+            <span
+                className={`absolute left-0.5 top-0.5 block h-5 w-5 rounded-full bg-white shadow transition-transform duration-150 ${
+                    checked ? 'translate-x-5' : 'translate-x-0'
+                }`}
+            />
+        </span>
     </button>
 );
+
+const StatusBadge = ({ status }) => {
+    const st = STATUS_STYLE[status];
+    return <span className={`inline-block px-2.5 py-1 text-xs font-bold rounded-full whitespace-nowrap ${st.cls}`}>{st.label}</span>;
+};
 
 /* ================================================================== */
 /*  HALAMAN KELOLA DISKON                                              */
@@ -253,22 +298,6 @@ export default function Index({ auth, discounts = [] }) {
     });
 
     const showToast = (type, message) => setToast({ type, message, id: Date.now() });
-
-    useEffect(() => {
-        if (!toast) return;
-        const t = setTimeout(() => setToast(null), 3200);
-        return () => clearTimeout(t);
-    }, [toast]);
-
-    useEffect(() => {
-        const onKey = (e) => {
-            if (e.key !== 'Escape') return;
-            setConfirmState(null);
-            setIsModalOpen(false);
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, []);
 
     /* ---------- modal ---------- */
     const openAddModal = () => {
@@ -341,7 +370,7 @@ export default function Index({ auth, discounts = [] }) {
         setData((prev) => ({ ...prev, start_date: formatDateInput(start), end_date: formatDateInput(end) }));
     };
 
-    /* ---------- aksi tabel ---------- */
+    /* ---------- aksi daftar ---------- */
     const handleToggle = (d) => {
         setTogglingId(d.id);
         router.patch(
@@ -375,6 +404,7 @@ export default function Index({ auth, discounts = [] }) {
 
     const q = search.trim().toLowerCase();
     const shown = withStatus.filter((d) => (statusFilter === 'all' || d._status === statusFilter) && (!q || d.name.toLowerCase().includes(q)));
+    const filtersActive = Boolean(q) || statusFilter !== 'all';
 
     const tabs = [
         { key: 'all', label: 'Semua', n: withStatus.length },
@@ -400,7 +430,7 @@ export default function Index({ auth, discounts = [] }) {
             user={auth.user}
             header={
                 <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center" aria-hidden="true">
                         <IconTag />
                     </span>
                     <h2 className="font-extrabold text-xl text-slate-900 tracking-tight leading-tight truncate">
@@ -412,264 +442,282 @@ export default function Index({ auth, discounts = [] }) {
             <Head title="Kelola Diskon" />
             <style>{css}</style>
 
-            {/* TOAST */}
-            {toast && (
-                <div className="fixed top-20 right-4 sm:right-6 z-[60]">
-                    <div
-                        key={toast.id}
-                        className={`sc-toast flex items-start gap-3 max-w-sm rounded-2xl px-4 py-3 border text-sm font-semibold ${
-                            toast.type === 'success'
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                                : 'bg-red-50 border-red-200 text-red-800'
-                        }`}
-                    >
-                        <span
-                            className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-white ${
-                                toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
-                            }`}
-                        >
-                            {toast.type === 'success' ? <IconCheck /> : <IconClose className="w-3 h-3" />}
-                        </span>
-                        <span className="leading-snug">{toast.message}</span>
-                        <button type="button" onClick={() => setToast(null)} aria-label="Tutup" className="ml-1 opacity-60 hover:opacity-100 transition">
-                            <IconClose className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <Toast toast={toast} onClose={() => setToast(null)} />
 
-            <div className="max-w-7xl mx-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-5">
                 {/* RINGKASAN */}
-                <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-                    <StatChip icon={<IconTag />} label="Total Program" value={withStatus.length} />
-                    <StatChip icon={<IconPlay />} label="Sedang Berlaku" value={count('berlaku')} tone="green" />
-                    <StatChip icon={<IconClock />} label="Akan Datang" value={count('akan')} />
-                    <StatChip icon={<IconPause />} label="Nonaktif / Berakhir" value={count('nonaktif') + count('berakhir')} tone="slate" />
-                </div>
+                <SummaryStrip
+                    items={[
+                        { icon: <IconTag />, label: 'Total program', value: withStatus.length },
+                        { icon: <IconPlay />, label: 'Sedang berlaku', value: count('berlaku'), tone: 'green' },
+                        { icon: <IconClock />, label: 'Akan datang', value: count('akan') },
+                        { icon: <IconPause />, label: 'Nonaktif / berakhir', value: count('nonaktif') + count('berakhir'), tone: 'slate' },
+                    ]}
+                />
 
-                {/* TOOLBAR */}
-                <Panel className="p-5 space-y-4">
-                    <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                        <div>
-                            <h3 className="text-base font-bold text-slate-900">Daftar Program Diskon ({discounts.length})</h3>
-                            <p className="text-xs text-slate-500 mt-0.5">Buat promo, atur masa berlaku, dan aktifkan kapan saja.</p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-                            <div className="relative flex-1 lg:w-64 min-w-[180px]">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                    <IconSearch />
-                                </span>
-                                <input
-                                    type="text"
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Cari nama promo..."
-                                    className={`${inputCls} text-xs pl-9 pr-9 py-2.5`}
-                                />
-                                {search && (
+                {/* PENCARIAN, AKSI, DAN FILTER STATUS */}
+                <Panel className="p-4 sm:p-5 space-y-4">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                        <div className="relative flex-1">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
+                                <IconSearch />
+                            </span>
+                            <input
+                                type="text"
+                                inputMode="search"
+                                autoComplete="off"
+                                aria-label="Cari promo berdasarkan nama"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Cari nama promo..."
+                                className={`${inputCls} pl-10 pr-12 ${okBorder}`}
+                            />
+                            {search && (
+                                <span className="absolute right-1 top-1/2 -translate-y-1/2">
                                     <button
                                         type="button"
                                         onClick={() => setSearch('')}
                                         aria-label="Hapus pencarian"
-                                        className="sc-pop absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition active:scale-90"
+                                        className="sc-pop w-10 h-10 rounded-xl text-slate-500 hover:bg-red-100 hover:text-red-600 active:bg-red-200 flex items-center justify-center transition-colors duration-150"
                                     >
-                                        <IconClose className="w-3 h-3" />
+                                        <IconClose />
                                     </button>
-                                )}
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={openAddModal}
-                                className="inline-flex items-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition duration-200 hover:-translate-y-0.5 active:scale-95"
-                            >
-                                <IconPlus />
-                                Buat Promo Baru
-                            </button>
+                                </span>
+                            )}
                         </div>
+
+                        <button type="button" onClick={openAddModal} className={`${btnPrimary} shrink-0`}>
+                            <IconPlus />
+                            Buat Promo Baru
+                        </button>
                     </div>
 
-                    <div className="sc-noscroll flex gap-2 overflow-x-auto">
+                    <div role="group" aria-label="Filter status promo" className="sc-noscroll flex gap-2 overflow-x-auto -mx-1 px-1 pb-1">
                         {tabs.map((tab) => {
                             const active = statusFilter === tab.key;
                             return (
-                                <button
-                                    key={tab.key}
-                                    type="button"
-                                    onClick={() => setStatusFilter(tab.key)}
-                                    aria-pressed={active}
-                                    className={`shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-xs font-bold transition duration-200 active:scale-95 ${
-                                        active
-                                            ? 'bg-blue-600 border-blue-600 text-white'
-                                            : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5'
-                                    }`}
-                                >
+                                <button key={tab.key} type="button" onClick={() => setStatusFilter(tab.key)} aria-pressed={active} className={`shrink-0 gap-2 ${chipCls(active)}`}>
                                     {tab.label}
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                                        {tab.n}
-                                    </span>
+                                    <span className={`text-xs font-bold px-1.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>{tab.n}</span>
                                 </button>
                             );
                         })}
                     </div>
 
-                    <div className="flex items-start gap-2.5 text-xs text-slate-600 bg-blue-50 border border-blue-100 rounded-xl px-3.5 py-2.5">
-                        <span className="text-blue-600 mt-0.5">
+                    <p className="flex items-start gap-2 text-sm text-slate-600 leading-relaxed">
+                        <span className="text-blue-600 mt-0.5 shrink-0">
                             <IconInfo />
                         </span>
-                        <p className="leading-relaxed">
+                        <span>
                             Hanya promo berstatus <b className="text-emerald-700">Berlaku</b> (aktif dan dalam masa berlaku) yang muncul di pilihan diskon halaman POS Kasir.
-                        </p>
-                    </div>
+                        </span>
+                    </p>
                 </Panel>
 
-                {/* TABEL */}
+                {/* DAFTAR PROMO */}
                 <Panel className="overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-slate-500 uppercase text-[11px]">
-                                <tr>
-                                    <th className="px-5 py-3.5 font-semibold">Nama Promo</th>
-                                    <th className="px-5 py-3.5 font-semibold">Potongan</th>
-                                    <th className="px-5 py-3.5 font-semibold">Min. Belanja</th>
-                                    <th className="px-5 py-3.5 font-semibold">Masa Berlaku</th>
-                                    <th className="px-5 py-3.5 font-semibold">Status</th>
-                                    <th className="px-5 py-3.5 font-semibold text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {shown.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="6" className="px-5 py-14 text-center">
-                                            <span className="text-slate-300 inline-block">
-                                                <IconTag className="w-10 h-10" />
-                                            </span>
-                                            <p className="text-slate-400 text-xs mt-2">
-                                                {discounts.length === 0 ? 'Belum ada program diskon.' : 'Tidak ada promo yang cocok dengan filter atau pencarian.'}
-                                            </p>
-                                            {discounts.length === 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={openAddModal}
-                                                    className="mt-4 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full transition active:scale-95"
-                                                >
-                                                    Buat promo pertama
-                                                </button>
-                                            )}
-                                        </td>
-                                    </tr>
+                    <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-4 border-b border-slate-200">
+                        <h3 className="font-bold text-slate-900 text-base">Daftar Program Diskon</h3>
+                        <span role="status" className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+                            {filtersActive ? `${shown.length} dari ${discounts.length}` : discounts.length}
+                        </span>
+                    </div>
+
+                    {shown.length === 0 ? (
+                        <div className="px-5 py-14 text-center">
+                            <span className="text-slate-400 inline-block">
+                                <IconTag className="w-10 h-10" />
+                            </span>
+                            <p className="text-sm font-semibold text-slate-700 mt-3">
+                                {discounts.length === 0 ? 'Belum ada program diskon' : 'Promo tidak ditemukan'}
+                            </p>
+                            <p className="text-sm text-slate-600 mt-1">
+                                {discounts.length === 0 ? 'Buat promo, atur masa berlaku, dan aktifkan kapan saja.' : 'Coba ubah filter atau kata kunci.'}
+                            </p>
+                            <div className="mt-4">
+                                {discounts.length === 0 ? (
+                                    <button type="button" onClick={openAddModal} className={btnPrimary}>
+                                        <IconPlus />
+                                        Buat promo pertama
+                                    </button>
                                 ) : (
-                                    shown.map((d, i) => {
-                                        const st = STATUS_STYLE[d._status];
-                                        const expired = d._status === 'berakhir';
-                                        return (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSearch('');
+                                            setStatusFilter('all');
+                                        }}
+                                        className={btnSecondary}
+                                    >
+                                        Reset filter
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            {/* Tabel (layar lebar) */}
+                            <div className="hidden xl:block overflow-x-auto">
+                                <table className="w-full text-left text-sm">
+                                    <caption className="sr-only">Daftar program diskon beserta masa berlaku dan status</caption>
+                                    <thead className="bg-slate-50 text-slate-600 text-xs">
+                                        <tr>
+                                            <th scope="col" className="px-5 py-3 font-semibold">Nama promo</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Potongan</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Minimal belanja</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Masa berlaku</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold">Status</th>
+                                            <th scope="col" className="px-4 py-3 font-semibold text-right">
+                                                <span className="sr-only">Aksi</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {shown.map((d, i) => (
                                             <tr
                                                 key={d.id}
                                                 style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
-                                                className={`sc-rowin border-t border-slate-100 transition-colors hover:bg-slate-50 ${expired ? 'opacity-70' : ''}`}
+                                                className={`sc-rowin border-t border-slate-100 transition-colors duration-150 hover:bg-slate-50 ${d._status === 'berakhir' ? 'opacity-75' : ''}`}
                                             >
-                                                <td className="px-5 py-4 font-bold text-slate-800">{d.name}</td>
-                                                <td className="px-5 py-4">
-                                                    <span className="inline-block bg-blue-50 text-blue-700 font-extrabold text-xs px-2.5 py-1 rounded-lg">
-                                                        {discountLabel(d)}
-                                                    </span>
+                                                <td className="px-5 py-2.5 font-bold text-slate-800">{d.name}</td>
+                                                <td className="px-4 py-2.5">
+                                                    <span className="inline-block bg-blue-50 text-blue-700 font-extrabold text-sm px-2.5 py-1 rounded-lg">{discountLabel(d)}</span>
                                                 </td>
-                                                <td className="px-5 py-4 text-slate-700 text-xs">
-                                                    {Number(d.min_purchase) > 0 ? rp(d.min_purchase) : <span className="text-slate-400">Tanpa minimal</span>}
+                                                <td className="px-4 py-2.5 text-slate-700">
+                                                    {Number(d.min_purchase) > 0 ? rp(d.min_purchase) : <span className="text-slate-600">Tanpa minimal</span>}
                                                 </td>
-                                                <td className="px-5 py-4">
-                                                    <p className="text-xs text-slate-700 font-medium whitespace-nowrap">
+                                                <td className="px-4 py-2.5">
+                                                    <p className="text-slate-700 font-medium whitespace-nowrap">
                                                         {fmtDate(d.start_date)} &ndash; {fmtDate(d.end_date)}
                                                     </p>
-                                                    <p className="text-[11px] text-slate-400 mt-0.5">{periodHint(d, d._status)}</p>
+                                                    <p className="text-xs text-slate-600 mt-0.5">{periodHint(d, d._status)}</p>
                                                 </td>
-                                                <td className="px-5 py-4">
-                                                    <div className="flex items-center gap-3">
+                                                <td className="px-4 py-1.5">
+                                                    <div className="flex items-center gap-1">
                                                         <Switch
                                                             checked={Boolean(d.is_active)}
                                                             onChange={() => handleToggle(d)}
                                                             disabled={togglingId === d.id}
                                                             label={`${d.is_active ? 'Nonaktifkan' : 'Aktifkan'} promo ${d.name}`}
                                                         />
-                                                        <span className={`px-2.5 py-1 text-[11px] font-bold rounded-full whitespace-nowrap ${st.cls}`}>{st.label}</span>
+                                                        <StatusBadge status={d._status} />
                                                     </div>
                                                 </td>
-                                                <td className="px-5 py-4">
-                                                    <div className="flex items-center justify-center gap-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openEditModal(d)}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-blue-600 hover:border-blue-600 hover:text-white transition duration-200 active:scale-95"
-                                                        >
-                                                            <IconEdit />
-                                                            Edit
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openDuplicateModal(d)}
-                                                            title="Salin sebagai promo baru"
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-800 hover:border-slate-800 hover:text-white transition duration-200 active:scale-95"
-                                                        >
-                                                            <IconCopy />
-                                                            Salin
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleDelete(d)}
-                                                            className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white transition duration-200 active:scale-95"
-                                                        >
-                                                            <IconTrash />
-                                                            Hapus
-                                                        </button>
+                                                <td className="px-3 py-2">
+                                                    <div className="flex items-center justify-end gap-1">
+                                                        <RowAction label={`Ubah ${d.name}`} onClick={() => openEditModal(d)}>
+                                                            <IconEdit className="w-[18px] h-[18px]" />
+                                                        </RowAction>
+                                                        <RowAction label={`Salin ${d.name} sebagai promo baru`} onClick={() => openDuplicateModal(d)}>
+                                                            <IconCopy className="w-[18px] h-[18px]" />
+                                                        </RowAction>
+                                                        <RowAction label={`Hapus ${d.name}`} tone="danger" onClick={() => handleDelete(d)}>
+                                                            <IconTrash className="w-[18px] h-[18px]" />
+                                                        </RowAction>
                                                     </div>
                                                 </td>
                                             </tr>
-                                        );
-                                    })
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Kartu (HP & tablet): enam kolom terlalu sempit di layar kecil */}
+                            <ul role="list" className="xl:hidden divide-y divide-slate-100">
+                                {shown.map((d, i) => (
+                                    <li
+                                        key={d.id}
+                                        style={{ animationDelay: `${Math.min(i, 12) * 30}ms` }}
+                                        className={`sc-rowin px-4 py-4 ${d._status === 'berakhir' ? 'opacity-75' : ''}`}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <p className="font-bold text-sm text-slate-800 leading-snug">{d.name}</p>
+                                            <span className="shrink-0 bg-blue-50 text-blue-700 font-extrabold text-sm px-2.5 py-1 rounded-lg">{discountLabel(d)}</span>
+                                        </div>
+                                        <p className="text-sm text-slate-700 mt-2">
+                                            {fmtDate(d.start_date)} &ndash; {fmtDate(d.end_date)}
+                                            <span className="text-slate-600"> &middot; {periodHint(d, d._status)}</span>
+                                        </p>
+                                        <p className="text-xs text-slate-600 mt-0.5">
+                                            {Number(d.min_purchase) > 0 ? `Minimal belanja ${rp(d.min_purchase)}` : 'Tanpa minimal belanja'}
+                                        </p>
+
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <Switch
+                                                checked={Boolean(d.is_active)}
+                                                onChange={() => handleToggle(d)}
+                                                disabled={togglingId === d.id}
+                                                label={`${d.is_active ? 'Nonaktifkan' : 'Aktifkan'} promo ${d.name}`}
+                                            />
+                                            <StatusBadge status={d._status} />
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2 mt-2">
+                                            <button type="button" onClick={() => openEditModal(d)} className={`${btnSecondary} !px-2 gap-1.5`}>
+                                                <IconEdit className="w-4 h-4" />
+                                                Ubah
+                                            </button>
+                                            <button type="button" onClick={() => openDuplicateModal(d)} className={`${btnSecondary} !px-2 gap-1.5`}>
+                                                <IconCopy className="w-4 h-4" />
+                                                Salin
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleDelete(d)}
+                                                className="inline-flex items-center justify-center gap-1.5 min-h-[44px] px-2 rounded-xl border border-red-200 bg-white text-red-600 text-sm font-bold transition-colors duration-150 hover:bg-red-50 active:bg-red-100"
+                                            >
+                                                <IconTrash className="w-4 h-4" />
+                                                Hapus
+                                            </button>
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </>
+                    )}
                 </Panel>
             </div>
 
             {/* ================= MODAL TAMBAH / EDIT ================= */}
             {isModalOpen && (
-                <div onClick={() => setIsModalOpen(false)} className="sc-fade fixed inset-0 z-50 bg-slate-900/50 flex justify-center items-center p-4">
-                    <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="sc-pop bg-white p-6 rounded-2xl w-full max-w-md space-y-4 max-h-[92vh] overflow-y-auto"
-                    >
-                        <div className="flex justify-between items-center border-b border-slate-100 pb-3">
-                            <h3 className="text-base font-bold text-slate-900">
-                                {editingDiscount ? 'Edit Program Diskon' : 'Buat Program Diskon Baru'}
-                            </h3>
-                            <button
-                                type="button"
-                                onClick={() => setIsModalOpen(false)}
-                                aria-label="Tutup"
-                                className="w-8 h-8 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition active:scale-90"
-                            >
-                                <IconClose />
-                            </button>
-                        </div>
+                <DialogShell onClose={() => setIsModalOpen(false)} labelledBy="judul-modal-diskon" size="md">
+                    <div className="flex justify-between items-center gap-3 px-5 sm:px-6 py-4 border-b border-slate-200">
+                        <h3 id="judul-modal-diskon" className="text-base font-bold text-slate-900">
+                            {editingDiscount ? 'Ubah Program Diskon' : 'Buat Program Diskon Baru'}
+                        </h3>
+                        <button
+                            type="button"
+                            onClick={() => setIsModalOpen(false)}
+                            aria-label="Tutup"
+                            className="w-11 h-11 -mr-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:bg-slate-200 flex items-center justify-center transition-colors duration-150"
+                        >
+                            <IconClose />
+                        </button>
+                    </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-4">
-                            <Field label="Nama Promo / Diskon" error={errors.name}>
+                    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 space-y-5">
+                            <Field id="disc-name" label="Nama promo" error={errors.name}>
                                 <input
+                                    id="disc-name"
+                                    data-autofocus
                                     type="text"
-                                    className={`${inputCls} py-2.5`}
+                                    className={`${inputCls} ${errors.name ? errBorder : okBorder}`}
                                     value={data.name}
                                     onChange={(e) => setData('name', e.target.value)}
                                     placeholder="Contoh: Diskon Grand Opening"
+                                    aria-invalid={Boolean(errors.name)}
+                                    aria-describedby={errors.name ? 'disc-name-error' : undefined}
                                     required
                                 />
                             </Field>
 
-                            {/* tipe potongan: tombol pilihan */}
-                            <Field label="Tipe Potongan">
-                                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                            {/* tipe potongan: dua pilihan */}
+                            <div>
+                                <p id="disc-type-label" className="block text-sm font-semibold text-slate-700 mb-1.5">
+                                    Tipe potongan
+                                </p>
+                                <div role="group" aria-labelledby="disc-type-label" className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
                                     {[
                                         { v: 'percentage', l: 'Persentase (%)' },
                                         { v: 'fixed', l: 'Nominal (Rp)' },
@@ -679,113 +727,122 @@ export default function Index({ auth, discounts = [] }) {
                                             type="button"
                                             onClick={() => setData((prev) => ({ ...prev, type: opt.v, value: '' }))}
                                             aria-pressed={data.type === opt.v}
-                                            className={`py-2 rounded-lg text-xs font-bold transition duration-200 active:scale-95 ${
-                                                data.type === opt.v ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                            className={`min-h-[44px] rounded-lg text-sm font-bold transition-colors duration-150 ${
+                                                data.type === opt.v ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                                             }`}
                                         >
                                             {opt.l}
                                         </button>
                                     ))}
                                 </div>
-                            </Field>
+                            </div>
 
-                            <Field label="Nilai Potongan" error={errors.value}>
-                                <input
-                                    type="number"
-                                    className={`${inputCls} py-2.5`}
-                                    value={data.value}
-                                    onChange={(e) => setData('value', e.target.value)}
-                                    placeholder={data.type === 'percentage' ? '10 (%)' : '5000 (Rp)'}
-                                    min="0"
-                                    max={data.type === 'percentage' ? 100 : undefined}
-                                    required
-                                />
-                                <div className="flex flex-wrap gap-1.5 mt-2">
+                            <Field id="disc-value" label="Nilai potongan" error={errors.value}>
+                                <div className="relative">
+                                    {data.type === 'fixed' && (
+                                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">Rp</span>
+                                    )}
+                                    <input
+                                        id="disc-value"
+                                        type="number"
+                                        inputMode="numeric"
+                                        className={`${inputCls} ${data.type === 'fixed' ? 'pl-10' : 'pr-10'} ${errors.value ? errBorder : okBorder}`}
+                                        value={data.value}
+                                        onChange={(e) => setData('value', e.target.value)}
+                                        placeholder={data.type === 'percentage' ? '10' : '5000'}
+                                        min="0"
+                                        max={data.type === 'percentage' ? 100 : undefined}
+                                        aria-invalid={Boolean(errors.value)}
+                                        aria-describedby={errors.value ? 'disc-value-error' : undefined}
+                                        required
+                                    />
+                                    {data.type === 'percentage' && (
+                                        <span className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">%</span>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-2 mt-2">
                                     {valuePresets.map((p) => (
-                                        <button
-                                            key={p}
-                                            type="button"
-                                            onClick={() => setData('value', String(p))}
-                                            className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition duration-150 active:scale-95 ${
-                                                String(data.value) === String(p)
-                                                    ? 'bg-blue-600 border-blue-600 text-white'
-                                                    : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
-                                            }`}
-                                        >
+                                        <button key={p} type="button" onClick={() => setData('value', String(p))} className={chipCls(String(data.value) === String(p))}>
                                             {data.type === 'percentage' ? `${p}%` : rp(p)}
                                         </button>
                                     ))}
                                 </div>
                             </Field>
 
-                            <Field label="Minimal Belanja (Rp)" error={errors.min_purchase} hint="Isi 0 jika tidak ada batas minimal.">
-                                <input
-                                    type="number"
-                                    className={`${inputCls} py-2.5`}
-                                    value={data.min_purchase}
-                                    onChange={(e) => setData('min_purchase', e.target.value)}
-                                    placeholder="0"
-                                    min="0"
-                                />
+                            <Field id="disc-min" label="Minimal belanja" error={errors.min_purchase} hint="Isi 0 jika tidak ada batas minimal.">
+                                <div className="relative">
+                                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">Rp</span>
+                                    <input
+                                        id="disc-min"
+                                        type="number"
+                                        inputMode="numeric"
+                                        className={`${inputCls} pl-10 ${errors.min_purchase ? errBorder : okBorder}`}
+                                        value={data.min_purchase}
+                                        onChange={(e) => setData('min_purchase', e.target.value)}
+                                        placeholder="0"
+                                        min="0"
+                                    />
+                                </div>
                             </Field>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <Field label="Tanggal Mulai" error={errors.start_date}>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <Field id="disc-start" label="Tanggal mulai" error={errors.start_date}>
                                     <input
+                                        id="disc-start"
                                         type="date"
-                                        className={`${inputCls} py-2.5`}
+                                        className={`${inputCls} ${errors.start_date ? errBorder : okBorder}`}
                                         value={data.start_date}
                                         onChange={(e) => setData('start_date', e.target.value)}
                                         required
                                     />
                                 </Field>
-                                <Field label="Tanggal Selesai" error={errors.end_date}>
+                                <Field id="disc-end" label="Tanggal selesai" error={errors.end_date}>
                                     <input
+                                        id="disc-end"
                                         type="date"
-                                        className={`${inputCls} py-2.5`}
+                                        className={`${inputCls} ${errors.end_date ? errBorder : okBorder}`}
                                         value={data.end_date}
                                         min={data.start_date || undefined}
                                         onChange={(e) => setData('end_date', e.target.value)}
+                                        aria-invalid={Boolean(errors.end_date)}
+                                        aria-describedby={errors.end_date ? 'disc-end-error' : undefined}
                                         required
                                     />
                                 </Field>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-1.5 -mt-1">
-                                <span className="text-[11px] font-semibold text-slate-500 mr-1">Durasi cepat:</span>
-                                {[
-                                    { d: 1, l: '1 hari' },
-                                    { d: 7, l: '7 hari' },
-                                    { d: 14, l: '14 hari' },
-                                    { d: 30, l: '30 hari' },
-                                ].map((x) => (
-                                    <button
-                                        key={x.d}
-                                        type="button"
-                                        onClick={() => setDuration(x.d)}
-                                        className="text-[11px] font-bold px-2.5 py-1 rounded-lg border border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 transition duration-150 active:scale-95"
-                                    >
-                                        {x.l}
-                                    </button>
-                                ))}
+                            <div className="-mt-1">
+                                <p className="text-sm font-semibold text-slate-700 mb-2">Durasi cepat</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        { d: 1, l: '1 hari' },
+                                        { d: 7, l: '7 hari' },
+                                        { d: 14, l: '14 hari' },
+                                        { d: 30, l: '30 hari' },
+                                    ].map((x) => (
+                                        <button key={x.d} type="button" onClick={() => setDuration(x.d)} className={chipCls(false)}>
+                                            {x.l}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             {/* pratinjau */}
-                            <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
-                                <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Pratinjau Potongan</p>
+                            <div className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3.5">
+                                <p className="text-sm font-bold text-slate-700">Pratinjau potongan</p>
                                 {data.value === '' ? (
-                                    <p className="text-xs text-slate-400 mt-1">Isi nilai potongan untuk melihat contoh perhitungan.</p>
+                                    <p className="text-sm text-slate-600 mt-1">Isi nilai potongan untuk melihat contoh perhitungan.</p>
                                 ) : (
-                                    <div key={`${data.type}-${data.value}-${previewBase}`} className="sc-pop text-xs text-slate-600 mt-1.5 space-y-1">
+                                    <div key={`${data.type}-${data.value}-${previewBase}`} aria-live="polite" className="sc-pop text-sm text-slate-600 mt-2 space-y-1.5">
                                         <div className="flex justify-between">
                                             <span>Belanja {Number(data.min_purchase) > 0 ? '(sesuai minimal)' : '(contoh)'}</span>
                                             <span className="font-semibold text-slate-800">{rp(previewBase)}</span>
                                         </div>
-                                        <div className="flex justify-between text-emerald-600 font-semibold">
+                                        <div className="flex justify-between text-emerald-700 font-semibold">
                                             <span>Potongan</span>
                                             <span>- {rp(Math.round(previewCut))}</span>
                                         </div>
-                                        <div className="flex justify-between border-t border-dashed border-slate-300 pt-1.5 font-extrabold text-blue-700">
+                                        <div className="flex justify-between border-t border-dashed border-slate-300 pt-2 font-extrabold text-blue-700">
                                             <span>Total bayar</span>
                                             <span>{rp(Math.round(previewBase - previewCut))}</span>
                                         </div>
@@ -794,51 +851,51 @@ export default function Index({ auth, discounts = [] }) {
                             </div>
 
                             {/* saklar aktif */}
-                            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 px-4 py-3">
+                            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 pl-4 pr-2 py-1.5">
                                 <div>
-                                    <p className="text-xs font-bold text-slate-800">Aktifkan promo ini sekarang</p>
-                                    <p className="text-[11px] text-slate-400">Promo yang nonaktif tidak muncul di POS.</p>
+                                    <p className="text-sm font-bold text-slate-800">Aktifkan promo ini sekarang</p>
+                                    <p className="text-xs text-slate-600">Promo yang nonaktif tidak muncul di POS.</p>
                                 </div>
                                 <Switch checked={data.is_active} onChange={() => setData('is_active', !data.is_active)} label="Aktifkan promo" />
                             </div>
+                        </div>
 
-                            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 px-4 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                                >
-                                    Batal
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
-                                >
-                                    {processing && <Spinner />}
-                                    {processing ? 'Menyimpan...' : editingDiscount ? 'Update Promo' : 'Simpan Promo'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+                        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 border-t border-slate-200 px-5 sm:px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className={btnSecondary}>
+                                Batal
+                            </button>
+                            <button type="submit" disabled={processing} aria-busy={processing} className={btnPrimary}>
+                                {processing && <Spinner />}
+                                {processing ? 'Menyimpan...' : editingDiscount ? 'Perbarui Promo' : 'Simpan Promo'}
+                            </button>
+                        </div>
+                    </form>
+                </DialogShell>
             )}
 
             {/* ================= DIALOG KONFIRMASI ================= */}
             {confirmState && (
-                <div onClick={() => setConfirmState(null)} className="sc-fade fixed inset-0 z-[70] bg-slate-900/50 flex justify-center items-center p-4">
-                    <div onClick={(e) => e.stopPropagation()} className="sc-pop bg-white rounded-2xl p-6 w-full max-w-sm text-center">
-                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                <DialogShell
+                    onClose={() => setConfirmState(null)}
+                    role="alertdialog"
+                    labelledBy="judul-konfirmasi"
+                    describedBy="isi-konfirmasi"
+                    size="sm"
+                    z="z-[70]"
+                    initialFocus="cancel"
+                >
+                    <div className="p-6 text-center">
+                        <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center" aria-hidden="true">
                             <IconTrash className="w-5 h-5" />
                         </span>
-                        <h3 className="text-base font-bold text-slate-900 mt-4">{confirmState.title}</h3>
-                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{confirmState.message}</p>
-                        <div className="flex gap-2 mt-6">
-                            <button
-                                type="button"
-                                onClick={() => setConfirmState(null)}
-                                className="flex-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
-                            >
+                        <h3 id="judul-konfirmasi" className="text-base font-bold text-slate-900 mt-4">
+                            {confirmState.title}
+                        </h3>
+                        <p id="isi-konfirmasi" className="text-sm text-slate-600 mt-1.5 leading-relaxed">
+                            {confirmState.message}
+                        </p>
+                        <div className="flex gap-2 mt-6 pb-[env(safe-area-inset-bottom)]">
+                            <button type="button" data-dialog-cancel onClick={() => setConfirmState(null)} className={`${btnSecondary} flex-1`}>
                                 Batal
                             </button>
                             <button
@@ -847,13 +904,13 @@ export default function Index({ auth, discounts = [] }) {
                                     confirmState.onConfirm();
                                     setConfirmState(null);
                                 }}
-                                className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="inline-flex flex-1 items-center justify-center min-h-[44px] rounded-xl bg-red-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-red-700 active:brightness-90"
                             >
                                 {confirmState.confirmLabel}
                             </button>
                         </div>
                     </div>
-                </div>
+                </DialogShell>
             )}
         </AuthenticatedLayout>
     );

@@ -4,29 +4,24 @@ import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 /*  Tema halaman PUBLIK (landing, login, daftar, lupa password, dst.)  */
 /*  Letakkan di: resources/js/Hooks/usePublicTheme.js                  */
 /*                                                                     */
-/*  - Hanya dua pilihan: 'samudra' (terang) dan 'malam' (gelap).        */
-/*  - Disimpan di sc-theme agar Welcome dan halaman autentikasi         */
-/*    menggunakan pilihan tema yang sama.                               */
-/*  - Tidak menyentuh atribut data-theme milik aplikasi.               */
+/*  - Hanya dua pilihan: 'terang' dan 'gelap'.                         */
+/*  - Disimpan di kunci sendiri (sc-public-theme), TERPISAH dari tema   */
+/*    aplikasi di dalam akun (Pengaturan > Tampilan), sehingga          */
+/*    mengganti tema di dalam aplikasi tidak mengubah halaman publik.   */
+/*  - Menghapus atribut data-theme (tema aplikasi dalam akun) saat      */
+/*    halaman publik dibuka; AuthenticatedLayout memasangnya lagi.      */
 /* ================================================================== */
 
-export const PUBLIC_THEME_KEY = 'sc-theme';
-const LEGACY_PUBLIC_THEME_KEY = 'sc-public-theme';
-export const THEME_LIGHT = 'samudra';
-export const THEME_DARK = 'malam';
+export const PUBLIC_THEME_KEY = 'sc-public-theme';
+export const THEME_LIGHT = 'terang';
+export const THEME_DARK = 'gelap';
 
 const isValid = (value) => value === THEME_LIGHT || value === THEME_DARK;
 
 const readSaved = () => {
     try {
         const value = localStorage.getItem(PUBLIC_THEME_KEY);
-        if (isValid(value)) return value;
-        if (value) return THEME_LIGHT;
-
-        const legacyValue = localStorage.getItem(LEGACY_PUBLIC_THEME_KEY);
-        if (legacyValue === 'gelap') return THEME_DARK;
-        if (legacyValue === 'terang') return THEME_LIGHT;
-        return null;
+        return isValid(value) ? value : null;
     } catch (error) {
         return null;
     }
@@ -48,6 +43,9 @@ export default function usePublicTheme() {
 
     // muat pilihan tersimpan; bila belum ada, ikuti pengaturan mode perangkat
     useIsomorphicLayoutEffect(() => {
+        // tema aplikasi di dalam akun (data-theme di <html>) tidak boleh bocor ke halaman publik
+        document.documentElement.removeAttribute('data-theme');
+
         const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
         const saved = readSaved();
         if (saved) setTheme(saved);
@@ -59,9 +57,7 @@ export default function usePublicTheme() {
         };
         // sinkron antar tab / antar halaman publik
         const onStorage = (e) => {
-            if (e.key !== PUBLIC_THEME_KEY) return;
-            if (isValid(e.newValue)) setTheme(e.newValue);
-            else if (e.newValue) setTheme(THEME_LIGHT);
+            if (e.key === PUBLIC_THEME_KEY && isValid(e.newValue)) setTheme(e.newValue);
         };
 
         if (mq && mq.addEventListener) mq.addEventListener('change', onSystemChange);

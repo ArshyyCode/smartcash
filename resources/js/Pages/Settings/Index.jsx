@@ -1,25 +1,31 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm } from '@inertiajs/react';
+import DialogShell from '@/Components/DialogShell';
+import Toast from '@/Components/Toast';
+import { Head, Link, useForm } from '@inertiajs/react';
+
+/* ================================================================== */
+/*  Pengaturan (Settings/Index.jsx)                                    */
+/*  Letakkan di: resources/js/Pages/Settings/Index.jsx                 */
+/*  Membutuhkan: Components/DialogShell.jsx dan Components/Toast.jsx   */
+/*  Tab: Profil & Banner, Kode Unik, Tampilan, Keamanan (Admin);       */
+/*       Keamanan (Kasir); Petunjuk Penggunaan (semua role).           */
+/* ================================================================== */
 
 /* ================================================================== */
 /*  CSS (animasi ringan, selaras dengan halaman lain)                  */
 /* ================================================================== */
 const css = `
 @keyframes sc-rowin { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-@keyframes sc-pop { 0% { transform: scale(.94); opacity: 0 } 100% { transform: scale(1); opacity: 1 } }
-@keyframes sc-toast { from { opacity: 0; transform: translateY(-12px) scale(.96) } to { opacity: 1; transform: none } }
-@keyframes sc-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes sc-pop { 0% { transform: scale(.96); opacity: 0 } 100% { transform: none; opacity: 1 } }
 @keyframes sc-spin { to { transform: rotate(360deg) } }
 .sc-rowin { animation: sc-rowin .35s cubic-bezier(.22,1,.36,1) backwards }
 .sc-pop { animation: sc-pop .2s cubic-bezier(.22,1,.36,1) backwards }
-.sc-toast { animation: sc-toast .3s cubic-bezier(.22,1,.36,1) backwards }
-.sc-fade { animation: sc-fade .2s ease backwards }
 .sc-spin { animation: sc-spin .8s linear infinite }
 .sc-noscroll::-webkit-scrollbar { display: none }
 .sc-noscroll { scrollbar-width: none }
 @media (prefers-reduced-motion: reduce) {
-    .sc-rowin, .sc-pop, .sc-toast, .sc-fade { animation: none !important }
+    .sc-rowin, .sc-pop { animation: none !important }
 }
 `;
 
@@ -56,7 +62,7 @@ const passwordStrength = (pw) => {
 /* ================================================================== */
 /*  IKON                                                               */
 /* ================================================================== */
-const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' };
+const ip = { fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
 
 const I = {
     Gear: ({ className = 'w-5 h-5' }) => (
@@ -202,80 +208,179 @@ const I = {
             <path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5" />
         </svg>
     ),
+    Home: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <path d="M3 11.5 12 4l9 7.5" />
+            <path d="M5.5 10v10h13V10" />
+            <path d="M10 20v-6h4v6" />
+        </svg>
+    ),
+    Cart: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <circle cx="9" cy="20" r="1.4" />
+            <circle cx="18" cy="20" r="1.4" />
+            <path d="M3 4h2.5l2.2 11h10.6l2-8H6.5" />
+        </svg>
+    ),
+    Box: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <path d="M21 8 12 3 3 8v8l9 5 9-5V8Z" />
+            <path d="m3 8 9 5 9-5M12 13v8" />
+        </svg>
+    ),
+    Inbox: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <path d="M3 13h5l1.5 2.5h5L16 13h5" />
+            <path d="M5 5h14l2 8v6H3v-6l2-8Z" />
+        </svg>
+    ),
+    Truck: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <path d="M3 6h11v10H3z" />
+            <path d="M14 9h4l3 3v4h-7" />
+            <circle cx="7" cy="18" r="1.6" />
+            <circle cx="17" cy="18" r="1.6" />
+        </svg>
+    ),
+    Tag: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <path d="M3 11.6V4.5A1.5 1.5 0 0 1 4.5 3h7.1a1.5 1.5 0 0 1 1.06.44l7.9 7.9a1.5 1.5 0 0 1 0 2.12l-7.1 7.1a1.5 1.5 0 0 1-2.12 0l-7.9-7.9A1.5 1.5 0 0 1 3 11.6Z" />
+            <circle cx="7.5" cy="7.5" r="1.2" />
+        </svg>
+    ),
+    Chart: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <path d="M4 20h16M7 20v-7M12 20V6M17 20v-10" />
+        </svg>
+    ),
+    Users: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <circle cx="9" cy="8" r="3.5" />
+            <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" />
+            <path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.3c2.2.7 3.5 2.6 3.5 5.7" />
+        </svg>
+    ),
+    Book: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v15H5.5A1.5 1.5 0 0 0 4 20.5v-15Z" />
+            <path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v15h5.5a1.5 1.5 0 0 1 1.5 1.5v-15Z" />
+        </svg>
+    ),
+    Chevron: ({ className = 'w-5 h-5' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <path d="m6 9 6 6 6-6" />
+        </svg>
+    ),
+    Search: ({ className = 'w-4 h-4' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+        </svg>
+    ),
+    Info: ({ className = 'w-4 h-4' }) => (
+        <svg viewBox="0 0 24 24" className={className} {...ip}>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 11v5M12 8h.01" />
+        </svg>
+    ),
 };
 
 /* ================================================================== */
 /*  KOMPONEN KECIL                                                     */
 /* ================================================================== */
 const inputCls =
-    'w-full text-sm rounded-xl bg-white py-2.5 placeholder:text-slate-400 transition duration-200 focus:ring-4 disabled:bg-slate-50 disabled:text-slate-400';
+    'w-full min-h-[44px] text-base sm:text-sm rounded-xl bg-white py-2.5 placeholder:text-slate-400 transition duration-150 focus:ring-4 disabled:bg-slate-50 disabled:text-slate-500';
 const okBorder = 'border-slate-200 hover:border-blue-300 focus:border-blue-500 focus:ring-blue-100';
 const errBorder = 'border-red-300 focus:border-red-500 focus:ring-red-100';
 
+const btnPrimary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl bg-blue-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-blue-700 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600';
+const btnSecondary =
+    'inline-flex items-center justify-center gap-2 min-h-[44px] px-5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-bold transition-colors duration-150 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50 disabled:opacity-60 disabled:cursor-not-allowed';
+
 const Spinner = () => (
-    <svg viewBox="0 0 24 24" className="sc-spin w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" className="sc-spin w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
         <path d="M12 3a9 9 0 1 0 9 9" />
     </svg>
 );
 
-/* Field: label di atas, ikon di kiri, pesan bantuan/error di bawah */
-const Field = ({ label, error, hint, right, icon, className = '', children }) => (
-    <div className={className}>
-        <div className="flex items-center justify-between mb-1.5 min-h-[18px]">
-            <label className="block text-xs font-semibold text-slate-700">{label}</label>
-            {right}
-        </div>
-        <div className="group relative">
-            {icon && (
-                <span className="pointer-events-none absolute left-3.5 top-3 text-slate-400 transition-colors group-focus-within:text-blue-600">{icon}</span>
+/* Field: label terhubung ke kolomnya (htmlFor/id otomatis), ikon di kiri,
+   pesan bantuan/error di bawah dan dibacakan pembaca layar */
+const Field = ({ label, error, hint, right, icon, className = '', children }) => {
+    const uid = useId().replace(/[^a-zA-Z0-9_-]/g, '');
+    const autoId = `fld-${uid}`;
+    const isEl = React.isValidElement(children);
+    const controlId = isEl ? children.props.id || autoId : autoId;
+    const control = isEl
+        ? React.cloneElement(children, {
+              id: controlId,
+              'aria-describedby': error ? `${controlId}-error` : hint ? `${controlId}-hint` : undefined,
+              'aria-invalid': error ? true : children.props['aria-invalid'],
+          })
+        : children;
+
+    return (
+        <div className={className}>
+            <div className="flex items-center justify-between gap-3 mb-1.5 min-h-[20px]">
+                <label htmlFor={controlId} className="block text-sm font-semibold text-slate-700">
+                    {label}
+                </label>
+                {right}
+            </div>
+            <div className="group relative">
+                {icon && (
+                    <span className="pointer-events-none absolute left-3.5 top-3 text-slate-500 transition-colors group-focus-within:text-blue-600">{icon}</span>
+                )}
+                {control}
+            </div>
+            {hint && !error && (
+                <p id={`${controlId}-hint`} className="text-xs text-slate-600 mt-1.5 leading-snug">
+                    {hint}
+                </p>
             )}
-            {children}
+            {error && (
+                <p id={`${controlId}-error`} role="alert" className="sc-pop flex items-start gap-1.5 text-red-600 text-xs font-semibold mt-1.5 leading-snug">
+                    <span className="mt-px shrink-0">
+                        <I.Alert className="w-3.5 h-3.5" />
+                    </span>
+                    <span>{error}</span>
+                </p>
+            )}
         </div>
-        {hint && !error && <p className="text-[11px] text-slate-400 mt-1.5 leading-snug">{hint}</p>}
-        {error && (
-            <p className="sc-pop flex items-start gap-1.5 text-red-500 text-[11px] font-semibold mt-1.5 leading-snug">
-                <span className="mt-px shrink-0">
-                    <I.Alert className="w-3.5 h-3.5" />
-                </span>
-                <span>{error}</span>
-            </p>
-        )}
-    </div>
-);
+    );
+};
 
 /* Kartu form standar: header (ikon, judul, deskripsi) -> isi -> footer aksi */
 const FormCard = ({ icon, title, desc, onSubmit, footer, children }) => (
     <form onSubmit={onSubmit} className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-        <div className="flex items-start gap-4 px-6 py-5 border-b border-slate-100">
+        <div className="flex items-start gap-4 px-5 py-4 sm:px-6 sm:py-5 border-b border-slate-200">
             <span className="w-11 h-11 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">{icon}</span>
             <div className="min-w-0">
                 <h3 className="text-base font-bold text-slate-900 leading-tight">{title}</h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">{desc}</p>
+                <p className="text-sm text-slate-600 mt-1 leading-relaxed">{desc}</p>
             </div>
         </div>
-        <div className="px-6 py-6">{children}</div>
+        <div className="px-5 py-5 sm:px-6 sm:py-6">{children}</div>
         {footer}
     </form>
 );
 
-/* Footer kartu: status di kiri, tombol di kanan */
+/* Footer kartu: status di kiri, tombol di kanan. Tombol nonaktif dibedakan lewat warna
+   dan teks status, bukan hanya transparansi. */
 const FormFooter = ({ processing, changed, onReset, label = 'Simpan Perubahan', idleText = 'Belum ada perubahan', blocked = '' }) => (
-    <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 px-6 py-4 bg-slate-50/80 border-t border-slate-100">
+    <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-3 px-5 sm:px-6 py-4 bg-slate-50 border-t border-slate-200">
         <p
-            className={`inline-flex items-center gap-2 text-xs font-medium transition-colors ${
-                blocked ? 'text-red-600' : changed ? 'text-amber-700' : 'text-slate-400'
+            role="status"
+            className={`inline-flex items-center gap-2 text-sm font-medium transition-colors duration-150 ${
+                blocked ? 'text-red-600' : changed ? 'text-amber-700' : 'text-slate-600'
             }`}
         >
-            <span className={`w-2 h-2 rounded-full ${blocked ? 'bg-red-500' : changed ? 'bg-amber-400' : 'bg-slate-300'}`} />
+            <span aria-hidden="true" className={`w-2 h-2 shrink-0 rounded-full ${blocked ? 'bg-red-500' : changed ? 'bg-amber-400' : 'bg-slate-400'}`} />
             {blocked || (changed ? 'Ada perubahan yang belum disimpan' : idleText)}
         </p>
         <div className="flex items-center gap-2 sm:justify-end">
             {changed && !processing && onReset && (
-                <button
-                    type="button"
-                    onClick={onReset}
-                    className="sc-pop inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 border border-slate-200 bg-white hover:bg-slate-100 px-4 py-2.5 rounded-xl transition duration-200 active:scale-95"
-                >
+                <button type="button" onClick={onReset} className={`sc-pop ${btnSecondary}`}>
                     <I.Undo />
                     Kembalikan
                 </button>
@@ -283,7 +388,8 @@ const FormFooter = ({ processing, changed, onReset, label = 'Simpan Perubahan', 
             <button
                 type="submit"
                 disabled={processing || !changed || Boolean(blocked)}
-                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition duration-200 hover:-translate-y-0.5 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                aria-busy={processing}
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 min-h-[44px] px-6 rounded-xl bg-blue-600 text-white text-sm font-bold transition-colors duration-150 hover:bg-blue-700 active:brightness-90 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed disabled:hover:bg-slate-200"
             >
                 {processing && <Spinner />}
                 {processing ? 'Menyimpan...' : label}
@@ -292,17 +398,18 @@ const FormFooter = ({ processing, changed, onReset, label = 'Simpan Perubahan', 
     </div>
 );
 
-/* input password dengan tombol mata */
+/* input kata sandi dengan tombol mata (44 px) */
 const PasswordInput = React.forwardRef(function PasswordInput({ error, ...props }, ref) {
     const [show, setShow] = useState(false);
     return (
         <>
-            <input ref={ref} type={show ? 'text' : 'password'} {...props} className={`${inputCls} pl-11 pr-12 ${error ? errBorder : okBorder}`} />
+            <input ref={ref} type={show ? 'text' : 'password'} {...props} className={`${inputCls} pl-11 pr-14 ${error ? errBorder : okBorder}`} />
             <button
                 type="button"
                 onClick={() => setShow((v) => !v)}
-                aria-label={show ? 'Sembunyikan password' : 'Tampilkan password'}
-                className="absolute right-2 top-1 w-9 h-9 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition active:scale-90"
+                aria-label={show ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                aria-pressed={show}
+                className="absolute right-0.5 top-0 w-11 h-11 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800 active:bg-slate-200 flex items-center justify-center transition-colors duration-150"
             >
                 {show ? <I.EyeOff /> : <I.Eye />}
             </button>
@@ -310,22 +417,13 @@ const PasswordInput = React.forwardRef(function PasswordInput({ error, ...props 
     );
 });
 
-/* dialog konfirmasi / modal sederhana */
-const Dialog = ({ onClose, children }) => {
-    useEffect(() => {
-        const onKey = (e) => e.key === 'Escape' && onClose();
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [onClose]);
-
-    return (
-        <div onClick={onClose} className="sc-fade fixed inset-0 z-[70] bg-slate-900/50 flex justify-center items-center p-4">
-            <div onClick={(e) => e.stopPropagation()} className="sc-pop bg-white rounded-2xl p-6 w-full max-w-sm">
-                {children}
-            </div>
-        </div>
-    );
-};
+/* dialog konfirmasi: memakai DialogShell (fokus terkunci, Esc menutup, lembar bawah di HP).
+   Judul di dalam isi harus memakai id="dlg-judul". */
+const Dialog = ({ onClose, children }) => (
+    <DialogShell onClose={onClose} labelledBy="dlg-judul" size="sm" z="z-[70]">
+        <div className="p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">{children}</div>
+    </DialogShell>
+);
 
 /* ================================================================== */
 /*  BAGIAN 1: PROFIL TOKO + BANNER DASHBOARD                           */
@@ -383,7 +481,7 @@ const Counter = ({ n, max }) => {
     const over = n > max;
     const near = !over && n >= Math.ceil(max * 0.9);
     return (
-        <span className={`text-[11px] tabular-nums ${over ? 'text-red-600 font-bold' : near ? 'text-amber-600 font-semibold' : 'text-slate-400'}`}>
+        <span className={`text-xs tabular-nums ${over ? 'text-red-600 font-bold' : near ? 'text-amber-600 font-semibold' : 'text-slate-500'}`}>
             {n}/{max}
         </span>
     );
@@ -399,49 +497,74 @@ function BannerPreview({ src, overlay, storeName, code, address, phone }) {
     const [failed, setFailed] = useState(false);
     useEffect(() => setFailed(false), [src]);
     const hasImg = Boolean(src) && !failed;
-    const dateText = new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const bannerOverlay = Math.min(80, Math.max(0, Number(overlay) || 0));
 
     return (
-        <div className="relative overflow-hidden rounded-xl bg-[rgb(var(--banner))] text-white">
+        <div className="relative flex flex-col items-start justify-between gap-6 overflow-hidden rounded-2xl bg-[rgb(var(--banner))] p-6 text-white sm:p-8 md:flex-row md:items-center">
             {hasImg && (
                 <>
                     <img src={src} alt="" onError={() => setFailed(true)} className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-slate-900 transition-opacity duration-200" style={{ opacity: overlay / 100 }} />
+                    <div className="absolute inset-0 bg-slate-900" style={{ opacity: bannerOverlay / 100 }} />
                 </>
             )}
 
-            <div className="relative flex items-center justify-between gap-4 px-5 py-6 sm:px-7 sm:py-8">
-                <div className="min-w-0">
-                    <span className="inline-flex items-center gap-1.5 bg-white/15 text-[10px] font-semibold px-2.5 py-1 rounded-full">{dateText}</span>
-                    <p className="text-lg sm:text-xl font-extrabold mt-2.5 tracking-tight break-words">
-                        {greetingNow()}, selamat datang di {storeName || 'Nama Toko'}
-                    </p>
-                    <div className="mt-2 space-y-1 text-[11px] sm:text-xs text-blue-100">
-                        <p className="flex items-start gap-1.5 leading-relaxed">
-                            <span className="mt-px shrink-0 opacity-90">
-                                <I.Pin className="w-3.5 h-3.5" />
-                            </span>
-                            <span className={`whitespace-pre-line break-words ${address ? '' : 'opacity-60'}`}>{address || 'Alamat toko belum diisi'}</span>
-                        </p>
-                        <p className="flex items-center gap-1.5">
-                            <span className="shrink-0 opacity-90">
-                                <I.Phone className="w-3.5 h-3.5" />
-                            </span>
-                            <span className={phone ? '' : 'opacity-60'}>{phone || 'Nomor telepon belum diisi'}</span>
-                        </p>
-                    </div>
-                </div>
-                <div className={`hidden sm:flex shrink-0 flex-col items-center rounded-lg border border-white/15 px-4 py-2.5 ${hasImg ? 'bg-slate-900/50' : 'bg-[rgb(var(--banner-card))]'}`}>
-                    <span className="text-[10px] text-blue-100">Kode Unik Toko</span>
-                    <span className="text-base font-black tracking-widest">{code || '-'}</span>
-                </div>
+            <div className="relative min-w-0">
+                <h1 className="tracking-tight">
+                    <span className="block text-base font-semibold text-blue-100 sm:text-lg">{greetingNow()}, selamat datang di</span>
+                    <span className="mt-1 block break-words text-2xl font-extrabold leading-tight sm:text-3xl">{storeName || 'Toko Anda'}</span>
+                </h1>
+                {address || phone ? (
+                    <ul className="mt-4 flex max-w-2xl flex-wrap items-start gap-x-6 gap-y-2 text-sm text-blue-100">
+                        {address && (
+                            <li className="flex items-start gap-2 leading-relaxed">
+                                <span className="mt-0.5 shrink-0 opacity-90">
+                                    <I.Pin className="w-4 h-4" />
+                                </span>
+                                <span className="whitespace-pre-line break-words">{address}</span>
+                            </li>
+                        )}
+                        {phone && (
+                            <li className="flex items-start gap-2 leading-relaxed">
+                                <span className="mt-0.5 shrink-0 opacity-90">
+                                    <I.Phone className="w-4 h-4" />
+                                </span>
+                                <span>{phone}</span>
+                            </li>
+                        )}
+                    </ul>
+                ) : (
+                    <Link
+                        href={route('settings.index', { tab: 'store' })}
+                        className="mt-2 inline-flex min-h-[44px] items-center text-xs font-semibold text-blue-100 underline-offset-2 transition-colors hover:text-white hover:underline"
+                    >
+                        Lengkapi alamat dan nomor telepon toko di Pengaturan
+                    </Link>
+                )}
             </div>
 
-            {failed && (
-                <span className="absolute bottom-2 right-2 text-[10px] font-semibold bg-white/90 text-red-600 px-2 py-1 rounded-md">
-                    Gambar tidak dapat dimuat
-                </span>
-            )}
+            <div
+                className={`relative flex w-full shrink-0 flex-col items-center rounded-xl border border-white/15 p-4 md:w-auto ${
+                    hasImg ? 'bg-slate-900/50 backdrop-blur-sm' : 'bg-[rgb(var(--banner-card))]'
+                }`}
+            >
+                <span className="text-xs font-medium text-blue-100">Kode Unik Toko</span>
+                <div className="mt-1.5 flex items-center gap-3">
+                    <span className="min-w-0 break-all text-xl font-black tracking-widest text-white sm:text-2xl">{code || '-'}</span>
+                    <span
+                        aria-hidden="true"
+                        className="inline-flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-xl bg-white px-4 text-xs font-bold text-blue-700"
+                    >
+                        <I.Copy className="w-3.5 h-3.5" />
+                        Salin
+                    </span>
+                </div>
+                <Link
+                    href={route('settings.index', { tab: 'code' })}
+                    className="mt-1 inline-flex min-h-[44px] items-center text-xs font-semibold text-blue-100 underline-offset-2 transition-colors hover:text-white hover:underline"
+                >
+                    Ubah kode toko
+                </Link>
+            </div>
         </div>
     );
 }
@@ -588,9 +711,9 @@ function StoreProfileSection({ store, showToast }) {
             <div className="space-y-7">
                 {/* PRATINJAU BANNER */}
                 <div>
-                    <div className="flex items-center justify-between mb-2.5">
-                        <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">Pratinjau Banner Dashboard</p>
-                        <span className="text-[11px] text-slate-400">Tampil di bagian atas Dashboard</span>
+                    <div className="flex items-center justify-between gap-3 mb-2.5">
+                        <p className="text-sm font-bold text-slate-800">Pratinjau Banner Dashboard</p>
+                        <span className="hidden sm:inline text-xs text-slate-600">Tampil di bagian atas Dashboard</span>
                     </div>
                     <BannerPreview
                         src={previewSrc}
@@ -667,21 +790,21 @@ function StoreProfileSection({ store, showToast }) {
                         <p className="text-sm font-bold text-slate-900">Banner Dashboard</p>
 
                         {/* pilihan sumber gambar */}
-                        <div role="tablist" aria-label="Sumber banner" className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl">
+                        <div role="radiogroup" aria-label="Sumber banner" className="grid grid-cols-3 gap-1 p-1 bg-slate-100 rounded-xl">
                             {sources.map((s) => {
                                 const active = data.banner_mode === s.key;
                                 return (
                                     <button
                                         key={s.key}
                                         type="button"
-                                        role="tab"
-                                        aria-selected={active}
+                                        role="radio"
+                                        aria-checked={active}
                                         onClick={() => {
                                             setData('banner_mode', s.key);
                                             clearErrors('banner_file', 'banner_url');
                                         }}
-                                        className={`inline-flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition duration-200 active:scale-95 ${
-                                            active ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+                                        className={`inline-flex items-center justify-center gap-1.5 min-h-[44px] rounded-lg text-xs font-bold transition-colors duration-150 ${
+                                            active ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-600 hover:text-slate-900'
                                         }`}
                                     >
                                         {s.icon}
@@ -705,15 +828,15 @@ function StoreProfileSection({ store, showToast }) {
                                         setDragging(false);
                                         pickFile(e.dataTransfer.files?.[0]);
                                     }}
-                                    className={`flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer rounded-xl border-2 border-dashed px-4 py-6 transition duration-200 ${
+                                    className={`flex flex-col items-center justify-center text-center gap-1.5 cursor-pointer rounded-xl border-2 border-dashed px-4 py-6 transition-colors duration-150 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100 ${
                                         dragging ? 'border-blue-500 bg-blue-50' : errors.banner_file || fileError ? 'border-red-300 bg-red-50/40' : 'border-slate-300 hover:border-blue-400 hover:bg-blue-50/50'
                                     }`}
                                 >
                                     <span className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
                                         <I.Upload className="w-5 h-5" />
                                     </span>
-                                    <span className="text-xs font-bold text-slate-700">Klik untuk memilih foto atau seret ke sini</span>
-                                    <span className="text-[11px] text-slate-400">JPG, PNG, atau WEBP &middot; maks. {MAX_BANNER_MB} MB &middot; disarankan 1600 x 400 px</span>
+                                    <span className="text-sm font-bold text-slate-700">Klik untuk memilih foto atau seret ke sini</span>
+                                    <span className="text-xs text-slate-500">JPG, PNG, atau WEBP &middot; maks. {MAX_BANNER_MB} MB &middot; disarankan 1600 x 400 px</span>
                                     <input
                                         key={fileKey}
                                         type="file"
@@ -731,17 +854,17 @@ function StoreProfileSection({ store, showToast }) {
                                         <button
                                             type="button"
                                             onClick={clearFile}
-                                            className="shrink-0 text-[11px] font-bold text-red-600 hover:text-red-800 transition active:scale-95"
+                                            className="shrink-0 inline-flex items-center min-h-[44px] px-2 text-xs font-bold text-red-600 hover:text-red-800 transition-colors duration-150"
                                         >
                                             Batalkan
                                         </button>
                                     </div>
                                 ) : existingIsLocal ? (
-                                    <p className="text-[11px] text-slate-400 mt-2">Saat ini memakai foto yang sudah diunggah. Pilih foto baru untuk menggantinya.</p>
+                                    <p className="text-xs text-slate-500 mt-2">Saat ini memakai foto yang sudah diunggah. Pilih foto baru untuk menggantinya.</p>
                                 ) : null}
 
                                 {(fileError || errors.banner_file) && (
-                                    <p className="sc-pop text-red-500 text-[11px] font-semibold mt-1.5">{fileError || errors.banner_file}</p>
+                                    <p className="sc-pop text-red-500 text-xs font-semibold mt-1.5">{fileError || errors.banner_file}</p>
                                 )}
                             </div>
                         )}
@@ -777,20 +900,22 @@ function StoreProfileSection({ store, showToast }) {
                         {data.banner_mode !== 'none' && (
                             <div className="sc-pop">
                                 <div className="flex items-center justify-between mb-1.5">
-                                    <label className="text-xs font-semibold text-slate-700">Gelapkan Gambar</label>
+                                    <label htmlFor="banner-overlay" className="text-sm font-semibold text-slate-700">Gelapkan Gambar</label>
                                     <span className="text-xs font-bold text-blue-700 tabular-nums">{data.banner_overlay}%</span>
                                 </div>
                                 <input
+                                    id="banner-overlay"
                                     type="range"
+                                    aria-valuetext={`${data.banner_overlay} persen`}
                                     min={0}
                                     max={80}
                                     step={5}
                                     value={data.banner_overlay}
                                     onChange={(e) => setData('banner_overlay', Number(e.target.value))}
-                                    className="w-full accent-blue-600"
+                                    className="w-full h-11 cursor-pointer accent-blue-600"
                                 />
-                                <p className="text-[11px] text-slate-400 mt-1">Naikkan agar tulisan lebih mudah dibaca di atas foto yang terang.</p>
-                                {errors.banner_overlay && <p className="text-red-500 text-[11px] font-semibold mt-1">{errors.banner_overlay}</p>}
+                                <p className="text-xs text-slate-500 mt-1">Naikkan agar tulisan lebih mudah dibaca di atas foto yang terang.</p>
+                                {errors.banner_overlay && <p className="text-red-500 text-xs font-semibold mt-1">{errors.banner_overlay}</p>}
                             </div>
                         )}
                     </div>
@@ -854,14 +979,14 @@ function StoreCodeSection({ store, showToast }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
                     {/* kode saat ini */}
                     <div>
-                        <p className="text-xs font-semibold text-slate-700 mb-1.5 min-h-[18px]">Kode Toko Saat Ini</p>
+                        <p className="text-sm font-semibold text-slate-700 mb-1.5 min-h-[44px] flex items-center">Kode Toko Saat Ini</p>
                         <div className="flex items-center justify-between gap-3 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
                             <p className="text-xl font-black tracking-widest text-[#14214f] break-all">{currentCode || '-'}</p>
                             <button
                                 type="button"
                                 onClick={copy}
                                 disabled={!currentCode}
-                                className={`shrink-0 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition duration-200 active:scale-95 disabled:opacity-50 ${
+                                className={`shrink-0 inline-flex items-center gap-1.5 min-h-[44px] text-sm font-bold px-4 rounded-xl transition-colors duration-150 active:brightness-90 disabled:opacity-60 disabled:cursor-not-allowed ${
                                     copied ? 'bg-emerald-500 text-white' : 'bg-white border border-blue-200 text-blue-700 hover:bg-blue-600 hover:text-white hover:border-blue-600'
                                 }`}
                             >
@@ -871,7 +996,7 @@ function StoreCodeSection({ store, showToast }) {
                                 {copied ? 'Tersalin' : 'Salin'}
                             </button>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-1.5">Bagikan kode ini ke staf agar mereka bisa login.</p>
+                        <p className="text-xs text-slate-500 mt-1.5">Bagikan kode ini ke staf agar mereka bisa login.</p>
                     </div>
 
                     {/* kode baru */}
@@ -882,7 +1007,7 @@ function StoreCodeSection({ store, showToast }) {
                             <button
                                 type="button"
                                 onClick={() => setData('code', randomStoreCode())}
-                                className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:text-blue-800 transition active:scale-95"
+                                className="inline-flex items-center gap-1.5 min-h-[44px] text-sm font-bold text-blue-600 hover:text-blue-800 transition-colors duration-150 active:opacity-70"
                             >
                                 <I.Dice />
                                 Buat acak
@@ -901,7 +1026,7 @@ function StoreCodeSection({ store, showToast }) {
                     </Field>
                 </div>
 
-                <div className="flex items-start gap-2.5 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mt-6">
+                <div className="flex items-start gap-2.5 text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3 mt-6">
                     <span className="mt-0.5 shrink-0 text-amber-600">
                         <I.Alert />
                     </span>
@@ -917,8 +1042,8 @@ function StoreCodeSection({ store, showToast }) {
                         <span className="w-12 h-12 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
                             <I.Key className="w-5 h-5" />
                         </span>
-                        <h3 className="text-base font-bold text-slate-900 mt-4">Ganti kode toko?</h3>
-                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                        <h3 id="dlg-judul" className="text-base font-bold text-slate-900 mt-4">Ganti kode toko?</h3>
+                        <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
                             Kode akan berubah dari <b className="text-slate-700">{currentCode}</b> menjadi{' '}
                             <b className="text-blue-700">{data.code.trim().toUpperCase()}</b>. Staf harus login dengan kode baru.
                         </p>
@@ -926,14 +1051,14 @@ function StoreCodeSection({ store, showToast }) {
                             <button
                                 type="button"
                                 onClick={() => setConfirming(false)}
-                                className="flex-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="flex-1 min-h-[44px] bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50 text-slate-700 rounded-xl text-sm font-bold transition-colors duration-150"
                             >
                                 Batal
                             </button>
                             <button
                                 type="button"
                                 onClick={doSave}
-                                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="flex-1 min-h-[44px] bg-blue-600 hover:bg-blue-700 active:brightness-90 text-white rounded-xl text-sm font-bold transition-colors duration-150"
                             >
                                 Ya, ganti
                             </button>
@@ -1085,7 +1210,7 @@ function PasswordCard({ showToast }) {
                             <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
                                 <div className={`h-full rounded-full transition-all duration-300 ${strength.bar} ${strength.w}`} />
                             </div>
-                            <p className={`text-[11px] font-semibold mt-1 ${strength.text}`}>Kekuatan password: {strength.label}</p>
+                            <p aria-live="polite" className={`text-xs font-semibold mt-1.5 ${strength.text}`}>Kekuatan kata sandi: {strength.label}</p>
                         </div>
                     )}
                 </div>
@@ -1106,7 +1231,7 @@ function PasswordCard({ showToast }) {
                             className={`sc-pop mt-2 inline-flex items-center gap-1.5 text-xs font-semibold ${match ? 'text-emerald-600' : 'text-amber-600'}`}
                         >
                             {match ? <I.Check className="w-3.5 h-3.5" /> : <I.Close className="w-3.5 h-3.5" />}
-                            {match ? 'Password cocok' : 'Password belum sama'}
+                            {match ? 'Kata sandi cocok' : 'Kata sandi belum sama'}
                         </p>
                     )}
                 </div>
@@ -1137,14 +1262,14 @@ function DangerCard({ isAdmin }) {
 
     return (
         <>
-            <div className="bg-white rounded-2xl border border-red-100 px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="bg-white rounded-2xl border border-red-200 p-5 sm:px-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-start gap-4">
                     <span className="w-11 h-11 shrink-0 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
                         <I.Alert className="w-5 h-5" />
                     </span>
                     <div>
                         <h3 className="text-base font-bold text-slate-900 leading-tight">Hapus Akun</h3>
-                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                        <p className="text-sm text-slate-600 mt-1 leading-relaxed">
                             Menghapus akun bersifat permanen dan tidak dapat dibatalkan.
                             {isAdmin && ' Admin terakhir toko tidak dapat menghapus akunnya sendiri.'}
                         </p>
@@ -1153,7 +1278,7 @@ function DangerCard({ isAdmin }) {
                 <button
                     type="button"
                     onClick={() => setOpen(true)}
-                    className="shrink-0 inline-flex items-center justify-center gap-2 text-xs font-bold px-4 py-2.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white transition duration-200 active:scale-95"
+                    className="shrink-0 inline-flex items-center justify-center gap-2 min-h-[44px] text-sm font-bold px-5 rounded-xl border border-red-200 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white active:brightness-90 transition-colors duration-150"
                 >
                     <I.Trash />
                     Hapus Akun Saya
@@ -1167,8 +1292,8 @@ function DangerCard({ isAdmin }) {
                             <span className="w-12 h-12 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center">
                                 <I.Trash className="w-5 h-5" />
                             </span>
-                            <h3 className="text-base font-bold text-slate-900 mt-4">Hapus akun Anda?</h3>
-                            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                            <h3 id="dlg-judul" className="text-base font-bold text-slate-900 mt-4">Hapus akun Anda?</h3>
+                            <p className="text-sm text-slate-600 mt-1.5 leading-relaxed">
                                 Akun akan dihapus permanen. Masukkan kata sandi Anda untuk mengonfirmasi.
                             </p>
                         </div>
@@ -1190,14 +1315,14 @@ function DangerCard({ isAdmin }) {
                             <button
                                 type="button"
                                 onClick={close}
-                                className="flex-1 bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 py-2.5 rounded-xl text-xs font-bold transition active:scale-95"
+                                className="flex-1 min-h-[44px] bg-white border border-slate-200 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50 text-slate-700 rounded-xl text-sm font-bold transition-colors duration-150"
                             >
                                 Batal
                             </button>
                             <button
                                 type="submit"
                                 disabled={processing || !data.password}
-                                className="flex-1 inline-flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-xs font-bold transition active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
+                                className="flex-1 inline-flex items-center justify-center gap-2 min-h-[44px] bg-red-600 hover:bg-red-700 active:brightness-90 text-white rounded-xl text-sm font-bold transition-colors duration-150 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed disabled:hover:bg-slate-200"
                             >
                                 {processing && <Spinner />}
                                 Ya, hapus
@@ -1226,10 +1351,10 @@ function SecuritySection({ user, isAdmin, showToast }) {
 /*  (file theme.css). Di sini hanya contoh mini untuk pratinjau.       */
 /* ================================================================== */
 const THEMES = [
-    { key: 'samudra', name: 'Samudra', tag: 'Biru Klasik', desc: 'Biru bersih dan profesional, tema bawaan SmartCash.', bg: '#f8fafc', surface: '#ffffff', sidebar: '#16255a', primary: '#2563eb', accent: '#38bdf8', line: '#e2e8f0', text: '#0f172a' },
-    { key: 'bumi', name: 'Bumi', tag: 'Earth Tone / Organik', desc: 'Hijau sage, terracotta, krem, dan pasir. Tenang, hangat, dan ramah alam.', bg: '#faf8f3', surface: '#fffdf9', sidebar: '#3b3228', primary: '#5e754b', accent: '#c16746', line: '#e8e2d6', text: '#30241b' },
-    { key: 'noir', name: 'Noir', tag: 'Monokrom / Hitam Putih', desc: 'Murni hitam, putih, dan abu-abu. Minimalis, klasik, fokus pada konten.', bg: '#fafafa', surface: '#ffffff', sidebar: '#0a0a0a', primary: '#171717', accent: '#a3a3a3', line: '#e5e5e5', text: '#171717' },
-    { key: 'malam', name: 'Malam', tag: 'Mode Gelap', desc: 'Gelap dan nyaman di mata saat bekerja di malam hari.', bg: '#0b1220', surface: '#111a2e', sidebar: '#0a1124', primary: '#2563eb', accent: '#38bdf8', line: '#2d3a52', text: '#e2e8f0' },
+    { key: 'samudra', name: 'Samudra', tag: 'Navy, Sky, Indigo', desc: 'Biru navy dengan aksen sky dan indigo. Bersih, profesional, dan tema bawaan SmartCash.', bg: '#F3F7FF', surface: '#FFFFFF', sidebar: '#0F1F4D', primary: '#3C4FD9', accent: '#38BDF8', line: '#D3DFF3', text: '#0F1F4D' },
+    { key: 'bumi', name: 'Bumi', tag: 'Earth Tone / Organik', desc: 'Hijau sage, terracotta, krem, dan pasir. Tenang, hangat, dan ramah alam.', bg: '#FAF8F3', surface: '#FFFDF9', sidebar: '#342C23', primary: '#566C44', accent: '#D68462', line: '#E2DBCC', text: '#211D18' },
+    { key: 'noir', name: 'Noir', tag: 'Monokrom / Hitam Putih', desc: 'Murni hitam, putih, dan abu-abu. Minimalis, klasik, fokus pada konten.', bg: '#F7F7F7', surface: '#FFFFFF', sidebar: '#0A0A0A', primary: '#171717', accent: '#C8C8C8', line: '#DEDEDE', text: '#171717' },
+    { key: 'malam', name: 'Malam', tag: 'Mode Gelap', desc: 'Gelap navy dengan aksen sky. Nyaman di mata saat bekerja di malam hari.', bg: '#0A1230', surface: '#121E4B', sidebar: '#060C24', primary: '#4F63E0', accent: '#38BDF8', line: '#2F4080', text: '#F2F6FF' },
 ];
 
 const THEME_KEYS = THEMES.map((t) => t.key);
@@ -1309,17 +1434,17 @@ function ThemeSection({ savedTheme, showToast }) {
                             role="radio"
                             aria-checked={active}
                             onClick={() => setData('theme', t.key)}
-                            className={`group text-left rounded-2xl border-2 p-3 transition duration-200 active:scale-[.98] ${
-                                active ? 'border-blue-600 bg-blue-50/60' : 'border-slate-200 hover:border-blue-300 hover:-translate-y-0.5'
+                            className={`group text-left rounded-2xl border-2 p-3 transition-colors duration-150 ${
+                                active ? 'border-blue-600 bg-blue-50' : 'border-slate-200 hover:border-blue-300 active:bg-blue-50'
                             }`}
                         >
                             <ThemeMock t={t} />
                             <div className="flex items-start justify-between gap-3 mt-3 px-1">
                                 <div>
                                     <p className="text-sm font-bold text-slate-900">
-                                        {t.name} <span className="text-[11px] font-semibold text-slate-400">&middot; {t.tag}</span>
+                                        {t.name} <span className="text-xs font-semibold text-slate-500">&middot; {t.tag}</span>
                                     </p>
-                                    <p className="text-[11px] text-slate-500 leading-snug mt-0.5">{t.desc}</p>
+                                    <p className="text-xs text-slate-500 leading-snug mt-0.5">{t.desc}</p>
                                 </div>
                                 <span
                                     className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center transition ${
@@ -1334,7 +1459,7 @@ function ThemeSection({ savedTheme, showToast }) {
                 })}
             </div>
 
-            <p className="flex items-start gap-2 text-xs text-slate-500 mt-5 leading-relaxed">
+            <p className="flex items-start gap-2 text-sm text-slate-600 mt-5 leading-relaxed">
                 <span className="mt-0.5 text-blue-600 shrink-0">
                     <I.Alert />
                 </span>
@@ -1345,40 +1470,506 @@ function ThemeSection({ savedTheme, showToast }) {
 }
 
 /* ================================================================== */
+/*  BAGIAN: PETUNJUK PENGGUNAAN                                        */
+/*  Isi menyesuaikan role: Admin melihat semua menu, Kasir hanya       */
+/*  yang bisa dipakai kasir beserta batasannya.                        */
+/* ================================================================== */
+// "only" membatasi langkah/catatan pada satu role saja
+const GUIDE = [
+    {
+        id: 'mulai',
+        title: 'Memulai: masuk dan berpindah menu',
+        icon: <I.Book className="w-5 h-5" />,
+        roles: ['admin', 'kasir'],
+        summary: 'Cara masuk, berpindah menu, dan keluar dari aplikasi.',
+        steps: [
+            'Buka halaman Masuk, lalu isi Kode Toko, username, dan kata sandi. Kode toko diberikan oleh admin toko.',
+            'Lupa kata sandi? Klik "Lupa kata sandi?" di halaman Masuk, lalu ikuti tautan yang dikirim ke email Anda.',
+            { only: 'admin', text: 'Menu ada di sidebar kiri: Dashboard dan POS Kasir, lalu menu pengelolaan (Produk, Restock, Supplier, Diskon, Laporan, Staf), dan Pengaturan.' },
+            { only: 'kasir', text: 'Menu ada di sidebar kiri: Dashboard, POS Kasir, dan Pengaturan.' },
+            'Di HP dan tablet, buka sidebar dengan tombol menu di kiri atas. Tutup dengan tombol X atau dengan mengetuk area gelap.',
+            'Untuk keluar, klik nama Anda di pojok kanan atas, lalu pilih "Keluar".',
+        ],
+        tips: ['Pengguna keyboard: tekan Tab satu kali untuk memunculkan tautan "Lewati ke konten utama".'],
+    },
+    {
+        id: 'dashboard',
+        title: 'Dashboard',
+        icon: <I.Home className="w-5 h-5" />,
+        roles: ['admin', 'kasir'],
+        href: 'dashboard',
+        summary: 'Ringkasan penjualan toko dan aktivitas transaksi terbaru.',
+        steps: [
+            'Banner di bagian atas menampilkan sapaan, alamat, dan nomor telepon toko.',
+            'Kartu ringkasan menampilkan omzet dan jumlah transaksi yang berhasil.',
+            'Grafik batang menunjukkan nilai transaksi terakhir. Arahkan kursor atau ketuk sebuah batang untuk melihat nilainya.',
+            'Pada "Aktivitas Transaksi Terakhir", cari transaksi berdasarkan ID atau nama kasir.',
+            { only: 'admin', text: 'Pintasan menu cepat membuka halaman pengelolaan, dan daftar "Stok Menipis" menampilkan barang yang perlu direstock.' },
+        ],
+        tips: ['Transaksi yang dibatalkan tidak dihitung di Dashboard.'],
+    },
+    {
+        id: 'pos',
+        title: 'POS Kasir',
+        icon: <I.Cart className="w-5 h-5" />,
+        roles: ['admin', 'kasir'],
+        href: 'pos.index',
+        summary: 'Melayani pelanggan: pilih produk, hitung total, terima uang, cetak struk.',
+        steps: [
+            'Cari produk lewat kolom cari (nama atau kode barang), atau pilih salah satu kategori.',
+            'Klik atau ketuk kartu produk untuk memasukkannya ke keranjang. Produk berstok habis tidak bisa ditambahkan.',
+            'Ubah jumlah dengan tombol minus dan plus. Hapus satu barang dengan ikon tempat sampah, atau pilih "Hapus Semua".',
+            'Pilih promo pada "Pilih Promo / Diskon" bila ada. Promo yang belum memenuhi minimal belanja akan diberi peringatan.',
+            'Isi "Uang Diterima" dengan tombol nominal cepat (bisa ditekan berkali-kali), atau pilih "Uang Pas". Tombol "Reset" mengosongkannya.',
+            'Periksa Total dan Kembalian, lalu klik "Bayar & Cetak Struk". Stok barang berkurang otomatis.',
+        ],
+        tips: [
+            'Di HP, bilah "Lihat Keranjang" di bagian bawah layar menggulir langsung ke keranjang.',
+            'Tombol Bayar baru aktif bila keranjang berisi barang dan uang diterima mencukupi. Alasannya tertulis di bawah tombol.',
+            { only: 'kasir', text: 'Transaksi yang sudah selesai tidak bisa dibatalkan oleh kasir. Minta admin membatalkannya lewat Laporan Penjualan.' },
+            { only: 'admin', text: 'Transaksi yang salah dapat dibatalkan dalam 24 jam lewat Laporan Penjualan.' },
+        ],
+    },
+    {
+        id: 'products',
+        title: 'Kelola Produk & Kategori',
+        icon: <I.Box className="w-5 h-5" />,
+        roles: ['admin'],
+        href: 'products.index',
+        summary: 'Tambah, ubah, dan hapus produk serta kategorinya.',
+        steps: [
+            'Klik "Tambah Produk", lalu isi kode, nama, kategori, supplier, harga beli, harga jual, dan stok awal. Foto produk bersifat opsional (tempel link gambar).',
+            'Ubah atau hapus produk lewat ikon pensil dan tempat sampah di setiap baris. Penghapusan selalu meminta konfirmasi.',
+            'Klik "Kelola Kategori" untuk menambah, mengubah, atau menghapus kategori. Kategori yang masih dipakai produk tidak bisa dihapus.',
+            'Saring daftar dengan chip kategori atau kolom cari. Daftar diurutkan dari stok paling sedikit.',
+        ],
+        tips: [
+            'Lencana stok: "Habis" (0), "Kritis" (5 atau kurang), "Menipis" (10 atau kurang).',
+            'Stok bertambah lewat Restock Barang dan berkurang lewat transaksi. Ubah stok langsung hanya untuk koreksi.',
+        ],
+    },
+    {
+        id: 'purchases',
+        title: 'Restock Barang',
+        icon: <I.Inbox className="w-5 h-5" />,
+        roles: ['admin'],
+        href: 'purchases.index',
+        summary: 'Catat barang masuk dari supplier agar stok bertambah otomatis.',
+        steps: [
+            'Klik "Catat Restock Baru". Kode invoice dibuat otomatis dan bisa dibuat ulang dengan "Buat ulang".',
+            'Pilih supplier lewat kolom cari. Belum terdaftar? Klik "+ Supplier baru" dan isi datanya langsung di sana.',
+            'Pilih produk, atur jumlah dan harga beli, lalu klik "Masukkan ke daftar restock". Ulangi untuk barang lain.',
+            'Periksa total restock di bagian bawah, lalu klik "Simpan & Tambah Stok".',
+        ],
+        tips: [
+            'Klik nama produk pada peringatan "Stok menipis" untuk membuka form restock dengan produk itu sudah terpilih.',
+            'Riwayat pembelian bisa dicari berdasarkan kode, supplier, atau pencatat.',
+        ],
+    },
+    {
+        id: 'suppliers',
+        title: 'Kelola Supplier',
+        icon: <I.Truck className="w-5 h-5" />,
+        roles: ['admin'],
+        href: 'suppliers.index',
+        summary: 'Simpan kontak pemasok agar restock lebih cepat.',
+        steps: [
+            'Klik "Tambah Supplier", lalu isi nama, nomor telepon, dan alamat.',
+            'Gunakan ikon telepon atau WhatsApp di samping nomor untuk menghubungi supplier langsung.',
+            'Ubah atau hapus lewat ikon di setiap baris. Supplier yang masih terhubung dengan data lain mungkin tidak dapat dihapus.',
+        ],
+        tips: ['Cari supplier lewat nama, nomor telepon, atau alamat.'],
+    },
+    {
+        id: 'discounts',
+        title: 'Kelola Diskon',
+        icon: <I.Tag className="w-5 h-5" />,
+        roles: ['admin'],
+        href: 'discounts.index',
+        summary: 'Buat promo potongan harga dan atur masa berlakunya.',
+        steps: [
+            'Klik "Buat Promo Baru". Isi nama promo, pilih tipe Persentase atau Nominal, lalu isi nilai potongan.',
+            'Atur minimal belanja (0 berarti tanpa minimal) serta tanggal mulai dan selesai. "Durasi cepat" mengisi tanggal otomatis.',
+            'Pakai saklar di daftar untuk mengaktifkan atau menonaktifkan promo kapan saja. Tombol "Salin" membuat promo baru dari promo yang ada.',
+        ],
+        tips: [
+            'Status promo: Berlaku, Akan Datang, Nonaktif, atau Berakhir.',
+            'Hanya promo berstatus "Berlaku" yang muncul di pilihan diskon POS Kasir.',
+        ],
+    },
+    {
+        id: 'reports',
+        title: 'Laporan Penjualan',
+        icon: <I.Chart className="w-5 h-5" />,
+        roles: ['admin'],
+        href: 'reports.index',
+        summary: 'Rekap penjualan, grafik tren, dan riwayat transaksi.',
+        steps: [
+            'Pilih tanggal mulai dan selesai, atau pintasan (Hari Ini, 7 Hari, 30 Hari, Bulan Ini), lalu klik "Terapkan".',
+            'Baca ringkasan pendapatan, jumlah transaksi, rata-rata per transaksi, dan hari terbaik. Grafik tren dilengkapi tabel data.',
+            'Pada riwayat transaksi, saring menurut status (Selesai, Dibatalkan, Berdiskon) atau cari lewat kode, kasir, dan produk.',
+            'Klik "Unduh CSV" untuk menyimpan data yang sedang tampil ke spreadsheet.',
+            'Klik "Batalkan" pada transaksi yang salah. Stok dikembalikan otomatis dan transaksi tidak dihitung sebagai omzet.',
+        ],
+        tips: ['Pembatalan hanya bisa dilakukan dalam 24 jam sejak transaksi dibuat.'],
+    },
+    {
+        id: 'users',
+        title: 'Kelola Staf / User',
+        icon: <I.Users className="w-5 h-5" />,
+        roles: ['admin'],
+        href: 'users.index',
+        summary: 'Tambah admin atau kasir dan atur hak aksesnya.',
+        steps: [
+            'Klik "Tambah User Baru". Isi nama, username, email, dan kata sandi (tombol "Buat acak" membantu), lalu pilih role Kasir atau Admin.',
+            'Berikan Kode Toko, username, dan kata sandi kepada staf agar mereka bisa masuk.',
+            'Ubah data atau role lewat ikon pensil. Kosongkan kolom kata sandi bila tidak ingin menggantinya.',
+            'Hapus akun staf lewat ikon tempat sampah. Akun Anda sendiri tidak bisa dihapus dari halaman ini dan role-nya terkunci.',
+        ],
+        tips: ['Kasir hanya dapat membuka Dashboard, POS Kasir, dan Keamanan Akun. Admin memiliki akses penuh.'],
+    },
+    {
+        id: 'settings',
+        title: 'Pengaturan',
+        icon: <I.Gear className="w-5 h-5" />,
+        roles: ['admin', 'kasir'],
+        tabLinks: true,
+        summary: {
+            admin: 'Atur identitas toko, kode toko, tema, dan keamanan akun.',
+            kasir: 'Kasir hanya dapat mengatur akun miliknya sendiri.',
+        },
+        steps: [
+            { only: 'admin', text: 'Profil & Banner: ubah nama, alamat, dan telepon toko, serta banner Dashboard (unggah foto, link gambar, atau polos). Pratinjau tampil langsung.' },
+            { only: 'admin', text: 'Kode Unik Toko: salin kode untuk dibagikan ke staf. Setelah kode diganti, semua staf wajib memakai kode baru saat masuk.' },
+            { only: 'admin', text: 'Tampilan: pilih salah satu dari empat tema (Samudra, Bumi, Noir, Malam), lalu klik "Simpan Tema". Tema berlaku untuk semua pengguna toko.' },
+            { only: 'admin', text: 'Keamanan Akun: ubah nama, username, email, dan kata sandi Anda. Hapus akun bersifat permanen.' },
+            { only: 'kasir', text: 'Keamanan Akun: ubah nama, username, email, dan kata sandi milik Anda sendiri.' },
+            { only: 'kasir', text: 'Gunakan kata sandi yang panjang. Indikator kekuatan kata sandi tampil saat Anda mengetik.' },
+            { only: 'kasir', text: 'Profil toko, kode toko, dan tema tampilan hanya dapat diubah oleh admin.' },
+        ],
+        tips: [
+            { only: 'admin', text: 'Tema dipratinjau langsung, tetapi baru dipakai seluruh staf setelah Anda menekan "Simpan Tema".' },
+            { only: 'kasir', text: 'Lupa kata sandi lama? Keluar, lalu gunakan "Lupa kata sandi?" di halaman Masuk.' },
+        ],
+    },
+];
+
+// akses per menu (ditampilkan untuk Admin sebagai ringkasan hak akses)
+const ACCESS = [
+    { menu: 'Dashboard', admin: true, kasir: true },
+    { menu: 'POS Kasir', admin: true, kasir: true },
+    { menu: 'Kelola Produk & Kategori', admin: true, kasir: false },
+    { menu: 'Restock Barang', admin: true, kasir: false },
+    { menu: 'Kelola Supplier', admin: true, kasir: false },
+    { menu: 'Kelola Diskon', admin: true, kasir: false },
+    { menu: 'Laporan & pembatalan transaksi', admin: true, kasir: false },
+    { menu: 'Kelola Staf / User', admin: true, kasir: false },
+    { menu: 'Profil toko, kode toko, tema', admin: true, kasir: false },
+    { menu: 'Keamanan akun sendiri', admin: true, kasir: true },
+];
+
+// hal yang tidak dapat dilakukan Kasir (ditampilkan khusus untuk Kasir)
+const KASIR_LIMITS = [
+    'Mengelola produk, kategori, stok, dan supplier',
+    'Mencatat restock barang',
+    'Membuat atau mengubah diskon dan promo',
+    'Melihat laporan penjualan atau membatalkan transaksi',
+    'Menambah, mengubah, atau menghapus staf',
+    'Mengubah profil toko, kode toko, dan tema tampilan',
+];
+
+const YesNo = ({ yes }) => (
+    <span className={`inline-flex items-center gap-1.5 text-sm font-semibold ${yes ? 'text-emerald-700' : 'text-slate-600'}`}>
+        {yes ? <I.Check className="w-4 h-4" /> : <I.Close className="w-4 h-4" />}
+        {yes ? 'Ya' : 'Tidak'}
+    </span>
+);
+
+function GuideSection({ isAdmin, tabsForLinks, onOpenTab }) {
+    const role = isAdmin ? 'admin' : 'kasir';
+    const [query, setQuery] = useState('');
+    const [open, setOpen] = useState(() => new Set(['mulai']));
+
+    // isi panduan sesuai role
+    const forRole = (list = []) => list.filter((x) => typeof x === 'string' || !x.only || x.only === role).map((x) => (typeof x === 'string' ? x : x.text));
+    const items = GUIDE.filter((g) => g.roles.includes(role)).map((g) => ({
+        ...g,
+        summary: typeof g.summary === 'string' ? g.summary : g.summary[role],
+        steps: forRole(g.steps),
+        tips: forRole(g.tips),
+    }));
+
+    const q = query.trim().toLowerCase();
+    const shown = q ? items.filter((g) => `${g.title} ${g.summary} ${g.steps.join(' ')} ${g.tips.join(' ')}`.toLowerCase().includes(q)) : items;
+
+    // saat mencari, buka semua hasil agar langsung terbaca
+    useEffect(() => {
+        if (q) setOpen(new Set(shown.map((g) => g.id)));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [q]);
+
+    const toggle = (id) =>
+        setOpen((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    const allOpen = shown.length > 0 && shown.every((g) => open.has(g.id));
+    const toggleAll = () => setOpen(allOpen ? new Set() : new Set(shown.map((g) => g.id)));
+
+    return (
+        <div className="space-y-5">
+            {/* PENGANTAR + PENCARIAN */}
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 sm:p-6 space-y-5">
+                <div className="flex items-start gap-4">
+                    <span className="w-11 h-11 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                        <I.Book className="w-5 h-5" />
+                    </span>
+                    <div className="min-w-0">
+                        <h3 className="text-base font-bold text-slate-900 leading-tight">Petunjuk Penggunaan SmartCash</h3>
+                        <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+                            {isAdmin
+                                ? 'Panduan singkat untuk setiap menu, dari Dashboard sampai Pengaturan. Anda masuk sebagai Admin, jadi seluruh menu tersedia.'
+                                : 'Panduan untuk menu yang dapat Anda pakai sebagai Kasir. Menu pengelolaan hanya tersedia untuk Admin.'}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                        <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500">
+                            <I.Search className="w-[18px] h-[18px]" />
+                        </span>
+                        <input
+                            type="text"
+                            inputMode="search"
+                            autoComplete="off"
+                            aria-label="Cari petunjuk"
+                            placeholder="Cari petunjuk, misalnya: diskon, stok, laporan..."
+                            value={query}
+                            onChange={(e) => setQuery(e.target.value)}
+                            className={`${inputCls} pl-11 pr-12 ${okBorder}`}
+                        />
+                        {query && (
+                            <span className="absolute right-1 top-1/2 -translate-y-1/2">
+                                <button
+                                    type="button"
+                                    onClick={() => setQuery('')}
+                                    aria-label="Hapus pencarian"
+                                    className="sc-pop w-10 h-10 rounded-xl text-slate-500 hover:bg-red-100 hover:text-red-600 active:bg-red-200 flex items-center justify-center transition-colors duration-150"
+                                >
+                                    <I.Close />
+                                </button>
+                            </span>
+                        )}
+                    </div>
+                    <button type="button" onClick={toggleAll} disabled={shown.length === 0} className={btnSecondary}>
+                        {allOpen ? 'Tutup semua' : 'Buka semua'}
+                    </button>
+                </div>
+                <p role="status" className="text-xs text-slate-600 -mt-2">
+                    {q ? `${shown.length} dari ${items.length} topik cocok.` : `${items.length} topik tersedia untuk role ${isAdmin ? 'Admin' : 'Kasir'}.`}
+                </p>
+            </div>
+
+            {/* HAK AKSES: Admin melihat tabel, Kasir melihat batasannya */}
+            {!q &&
+                (isAdmin ? (
+                    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                        <div className="px-5 sm:px-6 py-4 border-b border-slate-200">
+                            <h3 className="text-base font-bold text-slate-900">Hak akses per role</h3>
+                            <p className="text-sm text-slate-600 mt-0.5">Ringkasan menu yang dapat dibuka oleh Admin dan Kasir.</p>
+                        </div>
+                        <table className="w-full text-left">
+                            <caption className="sr-only">Hak akses Admin dan Kasir untuk setiap menu</caption>
+                            <thead className="bg-slate-50 text-slate-600 text-xs">
+                                <tr>
+                                    <th scope="col" className="px-5 sm:px-6 py-3 font-semibold">Menu</th>
+                                    <th scope="col" className="px-3 py-3 font-semibold">Admin</th>
+                                    <th scope="col" className="px-3 sm:px-6 py-3 font-semibold">Kasir</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {ACCESS.map((row) => (
+                                    <tr key={row.menu} className="border-t border-slate-100">
+                                        <th scope="row" className="px-5 sm:px-6 py-3 text-sm font-medium text-slate-800">
+                                            {row.menu}
+                                        </th>
+                                        <td className="px-3 py-3">
+                                            <YesNo yes={row.admin} />
+                                        </td>
+                                        <td className="px-3 sm:px-6 py-3">
+                                            <YesNo yes={row.kasir} />
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 sm:p-6">
+                        <h3 className="text-base font-bold text-slate-900">Batasan akun Kasir</h3>
+                        <p className="text-sm text-slate-600 mt-1">Hal berikut tidak tersedia untuk Kasir dan dilakukan oleh Admin:</p>
+                        <ul className="mt-3 space-y-2">
+                            {KASIR_LIMITS.map((text) => (
+                                <li key={text} className="flex items-start gap-2.5 text-sm text-slate-700">
+                                    <span className="mt-0.5 shrink-0 text-slate-500">
+                                        <I.Close className="w-4 h-4" />
+                                    </span>
+                                    {text}
+                                </li>
+                            ))}
+                        </ul>
+                        <p className="text-sm text-slate-600 mt-4">Butuh bantuan untuk hal di atas? Hubungi admin toko Anda.</p>
+                    </div>
+                ))}
+
+            {/* DAFTAR PETUNJUK */}
+            {shown.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-slate-200 px-5 py-14 text-center">
+                    <span className="text-slate-500 inline-block">
+                        <I.Search className="w-10 h-10" />
+                    </span>
+                    <p className="text-sm font-semibold text-slate-700 mt-3">Petunjuk tidak ditemukan</p>
+                    <p className="text-sm text-slate-600 mt-1">Coba kata kunci lain.</p>
+                    <div className="mt-4">
+                        <button type="button" onClick={() => setQuery('')} className={btnSecondary}>
+                            Hapus pencarian
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <ul role="list" className="bg-white rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-200">
+                    {shown.map((g) => {
+                        const opened = open.has(g.id);
+                        return (
+                            <li key={g.id}>
+                                <h4>
+                                    <button
+                                        type="button"
+                                        id={`gd-${g.id}-btn`}
+                                        aria-expanded={opened}
+                                        aria-controls={`gd-${g.id}`}
+                                        onClick={() => toggle(g.id)}
+                                        className="flex w-full items-center gap-3 px-4 sm:px-5 py-3 min-h-[68px] text-left transition-colors duration-150 hover:bg-slate-50 active:bg-slate-100"
+                                    >
+                                        <span className="w-10 h-10 shrink-0 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">{g.icon}</span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-sm font-bold text-slate-900">{g.title}</span>
+                                            <span className="block text-sm text-slate-600 mt-0.5">{g.summary}</span>
+                                        </span>
+                                        <span
+                                            className={`hidden sm:inline-block shrink-0 text-xs font-bold px-2.5 py-1 rounded-full ${
+                                                g.roles.length === 2 ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'
+                                            }`}
+                                        >
+                                            {g.roles.length === 2 ? 'Admin & Kasir' : 'Khusus Admin'}
+                                        </span>
+                                        <span className={`shrink-0 text-slate-500 transition-transform duration-150 ${opened ? 'rotate-180' : ''}`}>
+                                            <I.Chevron />
+                                        </span>
+                                    </button>
+                                </h4>
+
+                                {opened && (
+                                    <div id={`gd-${g.id}`} role="region" aria-labelledby={`gd-${g.id}-btn`} className="sc-pop px-4 sm:px-5 pb-5 sm:pl-[76px]">
+                                        <ol className="space-y-3">
+                                            {g.steps.map((step, i) => (
+                                                <li key={i} className="flex items-start gap-3 text-sm text-slate-700 leading-relaxed">
+                                                    <span className="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                                                    <span>{step}</span>
+                                                </li>
+                                            ))}
+                                        </ol>
+
+                                        {g.tips.length > 0 && (
+                                            <div className="mt-4 rounded-xl bg-blue-50 border border-blue-100 px-4 py-3">
+                                                <p className="flex items-center gap-2 text-sm font-bold text-blue-800">
+                                                    <I.Info className="w-4 h-4" />
+                                                    Catatan
+                                                </p>
+                                                <ul className="mt-1.5 list-disc pl-5 space-y-1 text-sm text-slate-700 leading-relaxed">
+                                                    {g.tips.map((tip, i) => (
+                                                        <li key={i}>{tip}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
+
+                                        {(g.href || g.tabLinks) && (
+                                            <div className="mt-4 flex flex-wrap gap-2">
+                                                {g.href && (
+                                                    <Link href={route(g.href)} className={btnPrimary}>
+                                                        Buka {g.title}
+                                                    </Link>
+                                                )}
+                                                {g.tabLinks &&
+                                                    tabsForLinks.map((t) => (
+                                                        <button key={t.key} type="button" onClick={() => onOpenTab(t.key)} className={btnSecondary}>
+                                                            Buka {t.title}
+                                                        </button>
+                                                    ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </div>
+    );
+}
+
+/* ================================================================== */
 /*  HALAMAN PENGATURAN                                                 */
 /* ================================================================== */
 export default function Index({ auth, store, initialTab }) {
     const user = auth.user;
     const isAdmin = user.role === 'admin';
+    const ti = 'w-[18px] h-[18px]';
 
     const tabs = [
         ...(isAdmin
             ? [
-                  { key: 'store', title: 'Profil & Banner', icon: <I.Store className="w-[18px] h-[18px]" /> },
-                  { key: 'code', title: 'Kode Unik Toko', icon: <I.Key className="w-[18px] h-[18px]" /> },
-                  { key: 'theme', title: 'Tampilan', icon: <I.Palette className="w-[18px] h-[18px]" /> },
+                  { key: 'store', title: 'Profil & Banner', icon: <I.Store className={ti} /> },
+                  { key: 'code', title: 'Kode Unik Toko', icon: <I.Key className={ti} /> },
+                  { key: 'theme', title: 'Tampilan', icon: <I.Palette className={ti} /> },
               ]
             : []),
-        { key: 'security', title: 'Keamanan Akun', icon: <I.Shield className="w-[18px] h-[18px]" /> },
+        { key: 'security', title: 'Keamanan Akun', icon: <I.Shield className={ti} /> },
+        { key: 'guide', title: 'Petunjuk', icon: <I.Book className={ti} /> },
     ];
 
     const [tab, setTab] = useState(() => (tabs.some((t) => t.key === initialTab) ? initialTab : tabs[0].key));
     const [toast, setToast] = useState(null);
+    const tabRefs = useRef({});
 
     const showToast = (type, message) => setToast({ type, message, id: Date.now() });
 
-    useEffect(() => {
-        if (!toast) return;
-        const t = setTimeout(() => setToast(null), 3200);
-        return () => clearTimeout(t);
-    }, [toast]);
-
-    const selectTab = (key) => {
+    const selectTab = (key, focus = false) => {
         setTab(key);
         try {
             window.history.replaceState(window.history.state, '', `${window.location.pathname}?tab=${key}`);
         } catch (e) {
             // abaikan
+        }
+        if (focus) requestAnimationFrame(() => tabRefs.current[key]?.focus());
+    };
+
+    // navigasi tab dengan keyboard: panah kiri/kanan, Home, End
+    const onTabKeyDown = (e) => {
+        const i = tabs.findIndex((t) => t.key === tab);
+        let next = null;
+        if (e.key === 'ArrowRight') next = (i + 1) % tabs.length;
+        else if (e.key === 'ArrowLeft') next = (i - 1 + tabs.length) % tabs.length;
+        else if (e.key === 'Home') next = 0;
+        else if (e.key === 'End') next = tabs.length - 1;
+        if (next !== null) {
+            e.preventDefault();
+            selectTab(tabs[next].key, true);
         }
     };
 
@@ -1387,7 +1978,7 @@ export default function Index({ auth, store, initialTab }) {
             user={user}
             header={
                 <div className="flex items-center gap-3">
-                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center">
+                    <span className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center" aria-hidden="true">
                         <I.Gear />
                     </span>
                     <h2 className="font-extrabold text-xl text-slate-900 tracking-tight leading-tight truncate">
@@ -1399,68 +1990,50 @@ export default function Index({ auth, store, initialTab }) {
             <Head title="Pengaturan" />
             <style>{css}</style>
 
-            {/* TOAST */}
-            {toast && (
-                <div className="fixed top-20 right-4 sm:right-6 z-[60]">
-                    <div
-                        key={toast.id}
-                        className={`sc-toast flex items-start gap-3 max-w-sm rounded-2xl px-4 py-3 border text-sm font-semibold ${
-                            toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-red-50 border-red-200 text-red-800'
-                        }`}
-                    >
-                        <span
-                            className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-white ${
-                                toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
-                            }`}
-                        >
-                            {toast.type === 'success' ? <I.Check /> : <I.Close className="w-3 h-3" />}
-                        </span>
-                        <span className="leading-snug">{toast.message}</span>
-                        <button type="button" onClick={() => setToast(null)} aria-label="Tutup" className="ml-1 opacity-60 hover:opacity-100 transition">
-                            <I.Close className="w-3.5 h-3.5" />
-                        </button>
-                    </div>
-                </div>
-            )}
+            <Toast toast={toast} onClose={() => setToast(null)} />
 
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-5xl mx-auto space-y-5">
                 {/* RINGKASAN TOKO & AKUN */}
-                <div className="bg-white rounded-2xl border border-slate-200 px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-center gap-4 min-w-0">
-                        <span className="w-12 h-12 shrink-0 rounded-xl bg-blue-600 text-white text-lg font-extrabold flex items-center justify-center">
+                        <span aria-hidden="true" className="w-12 h-12 shrink-0 rounded-xl bg-blue-600 text-white text-lg font-extrabold flex items-center justify-center">
                             {(store?.name || 'S').charAt(0).toUpperCase()}
                         </span>
                         <div className="min-w-0">
                             <p className="font-extrabold text-slate-900 truncate">{store?.name || 'Toko Anda'}</p>
-                            <p className="text-xs text-slate-500 truncate">{store?.address || 'Alamat toko belum diisi'}</p>
+                            <p className="text-sm text-slate-600 truncate">{store?.address || 'Alamat toko belum diisi'}</p>
                         </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-full">
+                        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-full">
                             <I.Key className="w-3.5 h-3.5" />
-                            {store?.code || '-'}
+                            Kode {store?.code || '-'}
                         </span>
-                        <span className={`text-[11px] font-bold px-3 py-1.5 rounded-full capitalize ${isAdmin ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                            {user.role}
+                        <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${isAdmin ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                            {isAdmin ? 'Admin' : 'Kasir'}
                         </span>
                     </div>
                 </div>
 
                 {/* TAB BAGIAN */}
-                <div role="tablist" className="sc-noscroll flex gap-1 overflow-x-auto border-b border-slate-200">
+                <div role="tablist" aria-label="Bagian pengaturan" onKeyDown={onTabKeyDown} className="sc-noscroll flex gap-1 overflow-x-auto border-b border-slate-200">
                     {tabs.map((t) => {
                         const active = tab === t.key;
                         return (
                             <button
                                 key={t.key}
+                                ref={(el) => {
+                                    tabRefs.current[t.key] = el;
+                                }}
+                                id={`tab-${t.key}`}
                                 type="button"
                                 role="tab"
                                 aria-selected={active}
+                                aria-controls="panel-pengaturan"
+                                tabIndex={active ? 0 : -1}
                                 onClick={() => selectTab(t.key)}
-                                className={`shrink-0 inline-flex items-center gap-2 px-4 py-3 -mb-px text-sm font-bold border-b-2 transition-colors duration-200 ${
-                                    active
-                                        ? 'border-blue-600 text-blue-700'
-                                        : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'
+                                className={`shrink-0 inline-flex items-center gap-2 min-h-[48px] px-4 -mb-px text-sm font-bold border-b-2 transition-colors duration-150 ${
+                                    active ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-600 hover:text-slate-900 hover:border-slate-400'
                                 }`}
                             >
                                 {t.icon}
@@ -1471,11 +2044,14 @@ export default function Index({ auth, store, initialTab }) {
                 </div>
 
                 {/* ISI BAGIAN */}
-                <div key={tab} className="sc-rowin">
+                <div key={tab} id="panel-pengaturan" role="tabpanel" aria-labelledby={`tab-${tab}`} className="sc-rowin">
                     {tab === 'store' && isAdmin && <StoreProfileSection store={store} showToast={showToast} />}
                     {tab === 'code' && isAdmin && <StoreCodeSection store={store} showToast={showToast} />}
                     {tab === 'theme' && isAdmin && <ThemeSection savedTheme={THEME_KEYS.includes(store?.theme) ? store.theme : 'samudra'} showToast={showToast} />}
                     {tab === 'security' && <SecuritySection user={user} isAdmin={isAdmin} showToast={showToast} />}
+                    {tab === 'guide' && (
+                        <GuideSection isAdmin={isAdmin} tabsForLinks={tabs.filter((t) => t.key !== 'guide')} onOpenTab={(key) => selectTab(key, true)} />
+                    )}
                 </div>
             </div>
         </AuthenticatedLayout>

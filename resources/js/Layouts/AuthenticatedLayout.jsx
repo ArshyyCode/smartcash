@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useState } from 'react';
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import { Link, usePage } from '@inertiajs/react';
+
+// useLayoutEffect: tema terpasang sebelum layar digambar, jadi tidak ada kedipan warna saat pindah halaman
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /* ================================================================== */
 /*  CSS ANIMASI                                                        */
@@ -132,14 +135,15 @@ const NavItem = ({ item, index, onNavigate }) => {
             href={route(item.routeName)}
             onClick={onNavigate}
             style={{ animationDelay: `${index * 45}ms` }}
-            className={`sc-navin group relative flex items-center gap-3 px-3.5 py-2.5 [@media(max-height:800px)]:py-2 rounded-xl text-[13px] font-semibold transition-all duration-200 ${
+            aria-current={active ? 'page' : undefined}
+            className={`sc-navin group relative flex items-center gap-3 px-3.5 py-3 [@media(max-height:800px)_and_(pointer:fine)]:py-2.5 rounded-xl text-[13px] font-semibold transition-colors duration-150 ${
                 active
                     ? 'bg-blue-600 text-white'
-                    : 'text-slate-300 hover:text-white hover:bg-white/10 hover:translate-x-1'
+                    : 'text-slate-300 hover:text-white hover:bg-white/10 active:bg-white/15'
             }`}
         >
             {active && <span className="absolute -left-4 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r-full bg-sky-400" />}
-            <span className="transition-transform duration-200 group-hover:scale-110">{item.icon}</span>
+            <span>{item.icon}</span>
             {item.label}
         </Link>
     );
@@ -153,7 +157,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
     // tema warna toko (dibagikan dari HandleInertiaRequests); dipasang ke <html data-theme="...">
     const { theme } = usePage().props;
-    useEffect(() => {
+    useIsoLayoutEffect(() => {
         const t = theme || 'samudra';
         document.documentElement.setAttribute('data-theme', t);
         try {
@@ -188,6 +192,13 @@ export default function AuthenticatedLayout({ user, header, children }) {
         <div className="min-h-screen bg-slate-50 flex">
             <style>{css}</style>
 
+            <a
+                href="#konten-utama"
+                className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:rounded-xl focus:bg-blue-600 focus:px-4 focus:py-2.5 focus:text-sm focus:font-bold focus:text-white"
+            >
+                Lewati ke konten utama
+            </a>
+
             {/* overlay untuk mobile */}
             {sidebarOpen && (
                 <div
@@ -199,6 +210,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
 
             {/* ===================== SIDEBAR ===================== */}
             <aside
+                aria-label="Menu samping"
                 className={`fixed inset-y-0 left-0 z-50 w-64 flex flex-col justify-between bg-[#16255a] transition-transform duration-300 ease-out md:translate-x-0 ${
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}
@@ -207,7 +219,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                     {/* logo & nama */}
                     <div className="flex items-center justify-between h-20 px-5 [@media(max-height:800px)]:h-16">
                         <Link href={route('dashboard')} onClick={closeSidebar} className="group flex items-center gap-3">
-                            <span className="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-lg shadow-black/20 transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-105">
+                            <span className="w-11 h-11 rounded-xl bg-white p-1.5 flex items-center justify-center shadow-lg shadow-black/20">
                                 <ApplicationLogo className="w-full h-full" />
                             </span>
                             <span>
@@ -222,14 +234,14 @@ export default function AuthenticatedLayout({ user, header, children }) {
                             type="button"
                             onClick={closeSidebar}
                             aria-label="Tutup menu"
-                            className="md:hidden w-9 h-9 rounded-lg text-slate-300 hover:bg-white/10 hover:text-white flex items-center justify-center transition"
+                            className="md:hidden w-11 h-11 rounded-xl text-slate-300 hover:bg-white/10 hover:text-white active:bg-white/15 flex items-center justify-center transition-colors duration-150"
                         >
                             <IconClose />
                         </button>
                     </div>
 
                     {/* menu */}
-                    <nav className="sc-side-scroll flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-1">
+                    <nav aria-label="Menu utama" className="sc-side-scroll flex-1 min-h-0 overflow-y-auto px-4 pb-4 space-y-1">
                         <p className="px-3 pt-2 pb-1 text-[10px] font-bold text-slate-400/80 uppercase tracking-widest">Menu Utama</p>
                         {MAIN_MENU.map((item, i) => (
                             <NavItem key={item.routeName} item={item} index={i} onNavigate={closeSidebar} />
@@ -273,7 +285,7 @@ export default function AuthenticatedLayout({ user, header, children }) {
                             type="button"
                             onClick={() => setSidebarOpen(true)}
                             aria-label="Buka menu"
-                            className="md:hidden w-10 h-10 rounded-xl border border-slate-200 bg-white text-slate-700 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 active:scale-95 transition"
+                            className="md:hidden w-11 h-11 rounded-xl border border-slate-200 bg-white text-slate-700 flex items-center justify-center hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 active:bg-blue-100 transition-colors duration-150"
                         >
                             <IconMenu />
                         </button>
@@ -295,16 +307,16 @@ export default function AuthenticatedLayout({ user, header, children }) {
                             <Dropdown.Trigger>
                                 <button
                                     type="button"
-                                    className="group flex items-center gap-2.5 rounded-xl pl-1.5 pr-2.5 py-1.5 hover:bg-blue-50 active:scale-95 transition duration-200"
+                                    className="group flex min-h-[44px] items-center gap-2.5 rounded-xl pl-1.5 pr-2.5 py-1.5 hover:bg-blue-50 active:bg-blue-100 transition-colors duration-150"
                                 >
-                                    <span className="w-9 h-9 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center transition-transform duration-200 group-hover:scale-105">
+                                    <span className="w-9 h-9 rounded-full bg-blue-600 text-white text-sm font-bold flex items-center justify-center">
                                         {initial}
                                     </span>
                                     <span className="hidden sm:block text-left leading-tight">
                                         <span className="block text-xs font-bold text-slate-800 max-w-[120px] truncate">{user?.name}</span>
                                         <span className="block text-[10px] font-semibold text-blue-600 capitalize">{user?.role}</span>
                                     </span>
-                                    <span className="hidden sm:block text-slate-400 transition-transform duration-200 group-hover:translate-y-0.5">
+                                    <span className="hidden sm:block text-slate-400">
                                         <IconChevron />
                                     </span>
                                 </button>
@@ -313,14 +325,16 @@ export default function AuthenticatedLayout({ user, header, children }) {
                             <Dropdown.Content align="right" width="48">
                                 <Dropdown.Link href={route('settings.index', { tab: 'security' })}>Pengaturan Akun</Dropdown.Link>
                                 <Dropdown.Link href={route('logout')} method="post" as="button">
-                                    Log Out
+                                    Keluar
                                 </Dropdown.Link>
                             </Dropdown.Content>
                         </Dropdown>
                     </div>
                 </header>
 
-                <main className="flex-1 p-4 sm:p-6 lg:p-8">{children}</main>
+                <main id="konten-utama" tabIndex={-1} className="flex-1 p-4 sm:p-6 lg:p-8 outline-none">
+                    {children}
+                </main>
             </div>
         </div>
     );

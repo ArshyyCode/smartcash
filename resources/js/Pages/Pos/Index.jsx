@@ -82,8 +82,9 @@ const ProductImage = ({ product, className = '', textSize = 'text-3xl' }) => {
     return (
         <img
             src={src}
-            alt={product.name}
+            alt=""
             loading="lazy"
+            decoding="async"
             draggable={false}
             onError={() => setFailed(true)}
             className={`object-cover ${className}`}
@@ -96,17 +97,17 @@ const ProductImage = ({ product, className = '', textSize = 'text-3xl' }) => {
 /* ================================================================== */
 const css = `
 @keyframes sc-rowin { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
-@keyframes sc-pop { 0% { transform: scale(.6); opacity: 0 } 60% { transform: scale(1.15) } 100% { transform: scale(1); opacity: 1 } }
-@keyframes sc-toast { from { opacity: 0; transform: translateY(-12px) scale(.96) } to { opacity: 1; transform: none } }
+@keyframes sc-pop { 0% { transform: scale(.9); opacity: 0 } 100% { transform: none; opacity: 1 } }
+@keyframes sc-toast { from { opacity: 0; transform: translateY(-12px) } to { opacity: 1; transform: none } }
 @keyframes sc-spin { to { transform: rotate(360deg) } }
 .sc-rowin { animation: sc-rowin .4s cubic-bezier(.22,1,.36,1) backwards }
-.sc-pop { animation: sc-pop .3s cubic-bezier(.22,1,.36,1) backwards }
+.sc-pop { animation: sc-pop .2s cubic-bezier(.22,1,.36,1) backwards }
 .sc-toast { animation: sc-toast .35s cubic-bezier(.22,1,.36,1) backwards }
 .sc-spin { animation: sc-spin .8s linear infinite }
 .sc-noscroll::-webkit-scrollbar { display: none }
 .sc-noscroll { scrollbar-width: none }
 .sc-thin::-webkit-scrollbar { width: 6px }
-.sc-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px }
+.sc-thin::-webkit-scrollbar-thumb { background: rgb(var(--s-300)); border-radius: 9999px }
 @media (prefers-reduced-motion: reduce) {
     .sc-rowin,.sc-pop,.sc-toast { animation: none !important }
 }
@@ -399,6 +400,14 @@ export default function Index({ auth, products = [], categories = [], activeDisc
     const cannotPay = cart.length === 0 || payAmount < totalPrice || processing;
     const totalItems = cart.reduce((s, i) => s + i.qty, 0);
 
+    // geser ke keranjang (dipakai bilah ringkasan di HP & tablet)
+    const goToCart = () => {
+        const el = document.getElementById('keranjang');
+        if (!el) return;
+        const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+    };
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -418,28 +427,32 @@ export default function Index({ auth, products = [], categories = [], activeDisc
 
             {/* TOAST */}
             {toast && (
-                <div className="fixed top-20 right-4 sm:right-6 z-[60]">
+                <div
+                    className="fixed top-20 right-4 sm:right-6 z-[60]"
+                    role={toast.type === 'success' ? 'status' : 'alert'}
+                    aria-live={toast.type === 'success' ? 'polite' : 'assertive'}
+                >
                     <div
                         key={toast.id}
-                        className={`sc-toast flex items-start gap-3 max-w-sm rounded-2xl px-4 py-3 shadow-md border text-sm font-semibold ${
+                        className={`sc-toast flex items-start gap-3 max-w-sm rounded-2xl pl-4 pr-1.5 py-2 shadow-md border text-sm font-semibold ${
                             toast.type === 'success'
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-800 shadow-emerald-500/10'
                                 : 'bg-red-50 border-red-200 text-red-800 shadow-red-500/10'
                         }`}
                     >
                         <span
-                            className={`mt-0.5 w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-white ${
+                            className={`mt-2 w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-white ${
                                 toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
                             }`}
                         >
                             {toast.type === 'success' ? <IconCheck className="w-3 h-3" /> : <IconClose className="w-3 h-3" />}
                         </span>
-                        <span className="leading-snug">{toast.message}</span>
+                        <span className="leading-snug py-2">{toast.message}</span>
                         <button
                             type="button"
                             onClick={() => setToast(null)}
-                            aria-label="Tutup"
-                            className="ml-1 opacity-60 hover:opacity-100 transition"
+                            aria-label="Tutup pemberitahuan"
+                            className="w-9 h-9 shrink-0 rounded-xl flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-black/5 transition-colors duration-150"
                         >
                             <IconClose className="w-3.5 h-3.5" />
                         </button>
@@ -447,37 +460,45 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                 </div>
             )}
 
-            <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start">
+            <div className="max-w-[1600px] mx-auto grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_400px] gap-6 items-start pb-24 xl:pb-0">
                 {/* ===================== KATALOG PRODUK ===================== */}
-                <div className="space-y-5 min-w-0">
+                <div className="space-y-4 sm:space-y-5 min-w-0">
                     {/* pencarian */}
                     <div className="relative">
-                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                        <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                             <IconSearch />
                         </span>
                         <input
                             type="text"
+                            inputMode="search"
+                            enterKeyHint="search"
+                            autoComplete="off"
+                            aria-label="Cari produk berdasarkan nama atau kode"
                             placeholder="Cari nama / kode barang..."
-                            className="w-full pl-12 pr-12 py-3.5 rounded-2xl bg-white border border-slate-200 text-sm shadow-sm placeholder:text-slate-400 transition duration-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            className="w-full min-h-[52px] pl-12 pr-14 rounded-2xl bg-white border border-slate-200 text-base sm:text-sm shadow-sm placeholder:text-slate-400 transition duration-150 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
                         {search && (
-                            <button
-                                type="button"
-                                onClick={() => setSearch('')}
-                                aria-label="Hapus pencarian"
-                                className="sc-pop absolute right-3 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-slate-100 text-slate-500 hover:bg-red-100 hover:text-red-600 flex items-center justify-center transition active:scale-90"
-                            >
-                                <IconClose className="w-3.5 h-3.5" />
-                            </button>
+                            <span className="absolute right-1.5 top-1/2 -translate-y-1/2">
+                                <button
+                                    type="button"
+                                    onClick={() => setSearch('')}
+                                    aria-label="Hapus pencarian"
+                                    className="sc-pop w-11 h-11 rounded-xl text-slate-500 hover:bg-red-100 hover:text-red-600 active:bg-red-200 flex items-center justify-center transition-colors duration-150"
+                                >
+                                    <IconClose className="w-4 h-4" />
+                                </button>
+                            </span>
                         )}
                     </div>
 
                     {/* kategori */}
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                        <h3 className="text-base font-extrabold text-[#14214f] mb-4">Kategori</h3>
-                        <div className="sc-noscroll flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                    <section aria-labelledby="judul-kategori" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+                        <h2 id="judul-kategori" className="text-base font-extrabold text-[#14214f] mb-4">
+                            Kategori
+                        </h2>
+                        <div role="group" aria-label="Filter kategori" className="sc-noscroll flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
                             {[{ id: 'all', name: 'Semua' }, ...categoryList].map((cat) => {
                                 const value = String(cat.id);
                                 const active = selectedCategory === value;
@@ -488,30 +509,30 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                                         type="button"
                                         onClick={() => setSelectedCategory(value)}
                                         aria-pressed={active}
-                                        className={`group shrink-0 min-w-[96px] flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border text-xs font-semibold transition duration-200 active:scale-95 ${
+                                        className={`shrink-0 min-w-[96px] min-h-[44px] flex flex-col items-center gap-1.5 px-4 py-3 rounded-xl border text-xs font-semibold transition-colors duration-150 ${
                                             active
-                                                ? 'bg-blue-600 border-blue-600 text-white'
-                                                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 hover:-translate-y-0.5'
+                                                ? 'bg-blue-600 border-blue-600 text-white active:brightness-90'
+                                                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 active:bg-blue-50'
                                         }`}
                                     >
-                                        <span className="transition-transform duration-200 group-hover:scale-110">
-                                            {cat.id === 'all' ? <IconGrid /> : categoryIcon(cat.name)}
-                                        </span>
+                                        <span>{cat.id === 'all' ? <IconGrid /> : categoryIcon(cat.name)}</span>
                                         <span className="truncate max-w-[110px]">{cat.name}</span>
-                                        <span className={`text-[10px] font-bold px-1.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                                        <span className={`text-[11px] font-bold px-1.5 rounded-full ${active ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
                                             {count}
                                         </span>
                                     </button>
                                 );
                             })}
                         </div>
-                    </div>
+                    </section>
 
                     {/* daftar produk */}
-                    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-base font-extrabold text-[#14214f]">Daftar Produk</h3>
-                            <span className="text-[11px] font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
+                    <section aria-labelledby="judul-produk" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+                        <div className="flex items-center justify-between gap-3 mb-4">
+                            <h2 id="judul-produk" className="text-base font-extrabold text-[#14214f]">
+                                Daftar Produk
+                            </h2>
+                            <span role="status" className="text-xs font-semibold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full">
                                 {filteredProducts.length} produk
                             </span>
                         </div>
@@ -521,8 +542,8 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                                 <div className="inline-block text-blue-200">
                                     <IconBox />
                                 </div>
-                                <p className="text-sm font-semibold text-slate-500 mt-3">Produk tidak ditemukan</p>
-                                <p className="text-xs text-slate-400 mt-1">Coba kata kunci atau kategori lain.</p>
+                                <p className="text-sm font-semibold text-slate-600 mt-3">Produk tidak ditemukan</p>
+                                <p className="text-xs text-slate-500 mt-1">Coba kata kunci atau kategori lain.</p>
                                 {(search || selectedCategory !== 'all') && (
                                     <button
                                         type="button"
@@ -530,35 +551,42 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                                             setSearch('');
                                             setSelectedCategory('all');
                                         }}
-                                        className="mt-4 text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full transition active:scale-95"
+                                        className="mt-4 min-h-[44px] text-xs font-bold text-blue-600 bg-blue-50 hover:bg-blue-100 active:bg-blue-100 px-5 rounded-full transition-colors duration-150"
                                     >
                                         Reset pencarian
                                     </button>
                                 )}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
                                 {filteredProducts.map((product, i) => {
                                     const soldOut = product.stock < 1;
                                     const flashing = flashId === product.id;
                                     return (
                                         <div
                                             key={product.id}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-disabled={soldOut}
+                                            aria-label={`${soldOut ? 'Stok habis: ' : 'Tambah ke keranjang: '}${product.name}, ${rp(product.selling_price)}, stok ${product.stock}`}
                                             onClick={() => addToCart(product)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.preventDefault();
+                                                    addToCart(product);
+                                                }
+                                            }}
                                             style={{ animationDelay: `${Math.min(i, 12) * 35}ms` }}
-                                            className={`sc-rowin group relative bg-white rounded-2xl border p-2.5 cursor-pointer flex flex-col transition duration-300 ${
+                                            className={`sc-rowin relative bg-white rounded-2xl border border-slate-200 p-2.5 flex flex-col transition duration-150 ${
                                                 soldOut
-                                                    ? 'border-slate-100 opacity-60'
-                                                    : 'border-slate-100 hover:border-blue-300 hover:-translate-y-0.5 hover:shadow-md hover:shadow-slate-200/70 active:scale-[.98]'
+                                                    ? 'opacity-60 cursor-not-allowed'
+                                                    : 'cursor-pointer hover:border-blue-300 hover:shadow-md hover:shadow-slate-200/70 active:bg-blue-50'
                                             }`}
                                         >
                                             <div className="relative w-full h-28 sm:h-32 rounded-xl overflow-hidden bg-slate-50">
-                                                <ProductImage
-                                                    product={product}
-                                                    className="w-full h-full transition-transform duration-500 group-hover:scale-105"
-                                                />
+                                                <ProductImage product={product} className="w-full h-full" />
                                                 <span
-                                                    className={`absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md ${
+                                                    className={`absolute top-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-full backdrop-blur-md ${
                                                         soldOut
                                                             ? 'bg-red-500/90 text-white'
                                                             : product.stock <= 10
@@ -566,21 +594,22 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                                                             : 'bg-white/90 text-emerald-700'
                                                     }`}
                                                 >
-                                                    {soldOut ? 'Habis' : `Stok: ${product.stock}`}
+                                                    {soldOut ? 'Habis' : product.stock <= 10 ? `Menipis: ${product.stock}` : `Stok: ${product.stock}`}
                                                 </span>
                                             </div>
 
                                             <div className="px-1 pt-2.5 flex-1">
-                                                <span className="text-[10px] font-semibold text-slate-400 tracking-wide">{product.code}</span>
-                                                <h3 className="font-bold text-slate-800 text-[13px] leading-snug truncate">{product.name}</h3>
-                                                <p className="text-[11px] text-slate-400 truncate">{product.category?.name || 'Umum'}</p>
+                                                <span className="text-[11px] font-semibold text-slate-500 tracking-wide">{product.code}</span>
+                                                <h3 className="font-bold text-slate-800 text-sm leading-snug truncate">{product.name}</h3>
+                                                <p className="text-xs text-slate-500 truncate">{product.category?.name || 'Umum'}</p>
                                             </div>
 
-                                            <div className="px-1 pt-2 flex items-center justify-between">
-                                                <span className="font-extrabold text-[13px] text-blue-600">{rp(product.selling_price)}</span>
+                                            <div className="px-1 pt-2 flex items-center justify-between gap-2">
+                                                <span className="font-extrabold text-sm text-blue-600">{rp(product.selling_price)}</span>
                                                 <span
-                                                    className={`w-8 h-8 rounded-lg flex items-center justify-center text-white transition duration-200 ${
-                                                        flashing ? 'bg-emerald-500 scale-110' : 'bg-blue-600 group-hover:bg-blue-700'
+                                                    aria-hidden="true"
+                                                    className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center text-white transition-colors duration-150 ${
+                                                        flashing ? 'bg-emerald-500' : 'bg-blue-600'
                                                     }`}
                                                 >
                                                     {flashing ? <IconCheck className="w-4 h-4 sc-pop" /> : <IconPlus />}
@@ -591,94 +620,94 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                                 })}
                             </div>
                         )}
-                    </div>
+                    </section>
                 </div>
 
                 {/* ===================== KERANJANG & PEMBAYARAN ===================== */}
-                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex flex-col lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] overflow-y-auto sc-thin">
+                <section
+                    id="keranjang"
+                    aria-labelledby="judul-keranjang"
+                    className="scroll-mt-24 bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col xl:sticky xl:top-24 xl:max-h-[calc(100dvh-7rem)] overflow-y-auto sc-thin"
+                >
                     {/* judul */}
                     <div className="flex items-center justify-between gap-3 pb-4 shrink-0">
-                        <h3 className="flex items-center gap-2.5 text-base font-extrabold text-[#14214f]">
+                        <h2 id="judul-keranjang" className="flex items-center gap-2.5 text-base font-extrabold text-[#14214f]">
                             <span className="text-blue-600">
                                 <IconCart className="w-6 h-6" />
                             </span>
-                            Keranjang Belanja
+                            Keranjang
                             <span
                                 key={totalItems}
-                                className="sc-pop min-w-[22px] h-[22px] px-1.5 rounded-full bg-blue-600 text-white text-[11px] font-bold flex items-center justify-center"
+                                aria-label={`${cart.length} jenis barang`}
+                                className="sc-pop min-w-[24px] h-6 px-1.5 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center"
                             >
                                 {cart.length}
                             </span>
-                        </h3>
+                        </h2>
                         <button
                             type="button"
                             onClick={clearCart}
                             disabled={cart.length === 0}
-                            className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 px-3 py-1.5 rounded-lg transition duration-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
+                            className="inline-flex items-center gap-1.5 min-h-[44px] text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 active:bg-red-100 px-3.5 rounded-xl transition-colors duration-150 disabled:text-slate-400 disabled:hover:bg-slate-50 disabled:hover:text-slate-400 disabled:hover:border-slate-200 disabled:cursor-not-allowed"
                         >
-                            <IconTrash className="w-3.5 h-3.5" />
+                            <IconTrash className="w-4 h-4" />
                             Hapus Semua
                         </button>
                     </div>
 
                     {/* item keranjang */}
-                    <div className="sc-thin flex-1 min-h-[140px] max-h-[340px] lg:max-h-none overflow-y-auto pr-1 border-t border-slate-100">
+                    <div role="list" aria-label="Isi keranjang" className="sc-thin flex-1 min-h-[140px] max-h-[340px] xl:max-h-none overflow-y-auto pr-1 border-t border-slate-200">
                         {cart.length === 0 ? (
                             <div className="h-full flex flex-col items-center justify-center text-center py-10">
                                 <div className="text-blue-200">
                                     <IconBasket />
                                 </div>
-                                <p className="text-sm font-semibold text-slate-500 mt-2">Keranjang masih kosong</p>
-                                <p className="text-xs text-slate-400 mt-0.5">Klik produk untuk menambahkannya.</p>
+                                <p className="text-sm font-semibold text-slate-600 mt-2">Keranjang masih kosong</p>
+                                <p className="text-xs text-slate-500 mt-0.5">Pilih produk untuk menambahkannya.</p>
                             </div>
                         ) : (
                             cart.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="sc-rowin group flex items-center gap-3 py-3 border-b border-slate-100 last:border-b-0"
-                                >
-                                    <ProductImage
-                                        product={item}
-                                        textSize="text-lg"
-                                        className="w-12 h-12 rounded-xl shrink-0 transition-transform duration-200 group-hover:scale-105"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <h4 className="font-bold text-xs text-slate-800 truncate">{item.name}</h4>
-                                        <span className="text-[11px] font-semibold text-blue-600">{rp(item.selling_price)}</span>
-                                    </div>
-
-                                    <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 shrink-0">
-                                        <button
-                                            type="button"
-                                            onClick={() => updateQty(item.id, -1)}
-                                            aria-label="Kurangi jumlah"
-                                            className="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-l-xl transition active:scale-75"
-                                        >
-                                            <IconMinus />
-                                        </button>
-                                        <span key={item.qty} className="sc-pop w-6 text-center text-xs font-bold text-slate-800">
-                                            {item.qty}
-                                        </span>
-                                        <button
-                                            type="button"
-                                            onClick={() => updateQty(item.id, 1)}
-                                            aria-label="Tambah jumlah"
-                                            className="w-7 h-7 flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-r-xl transition active:scale-75"
-                                        >
-                                            <IconPlus className="w-3.5 h-3.5" />
-                                        </button>
-                                    </div>
-
-                                    <div className="flex flex-col items-end shrink-0 gap-0.5">
+                                <div key={item.id} role="listitem" className="sc-rowin py-3 border-b border-slate-100 last:border-b-0">
+                                    <div className="flex items-start gap-3">
+                                        <ProductImage product={item} textSize="text-lg" className="w-12 h-12 rounded-xl shrink-0" />
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-bold text-[13px] leading-snug text-slate-800 truncate">{item.name}</h3>
+                                            <span className="text-xs font-semibold text-blue-600">{rp(item.selling_price)}</span>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={() => removeFromCart(item.id)}
-                                            aria-label="Hapus dari keranjang"
-                                            className="w-5 h-5 rounded-full text-slate-300 hover:bg-red-100 hover:text-red-500 flex items-center justify-center transition active:scale-75"
+                                            aria-label={`Hapus ${item.name} dari keranjang`}
+                                            className="w-11 h-11 -mt-1.5 -mr-2 shrink-0 rounded-xl text-slate-500 hover:bg-red-100 hover:text-red-600 active:bg-red-200 flex items-center justify-center transition-colors duration-150"
                                         >
-                                            <IconClose className="w-3 h-3" />
+                                            <IconTrash className="w-[18px] h-[18px]" />
                                         </button>
-                                        <span className="text-[11px] font-bold text-slate-600">{rp(item.selling_price * item.qty)}</span>
+                                    </div>
+
+                                    <div className="mt-1 flex items-center justify-between gap-3 pl-[60px]">
+                                        <div role="group" aria-label={`Jumlah ${item.name}`} className="flex items-center rounded-xl border border-slate-200 bg-slate-50">
+                                            <button
+                                                type="button"
+                                                onClick={() => updateQty(item.id, -1)}
+                                                disabled={item.qty <= 1}
+                                                aria-label={`Kurangi jumlah ${item.name}`}
+                                                className="w-11 h-11 flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 rounded-l-xl transition-colors duration-150 disabled:text-slate-300 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                                            >
+                                                <IconMinus className="w-4 h-4" />
+                                            </button>
+                                            <span key={item.qty} aria-live="polite" className="sc-pop min-w-[2.25rem] text-center text-sm font-bold text-slate-800">
+                                                {item.qty}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => updateQty(item.id, 1)}
+                                                aria-label={`Tambah jumlah ${item.name}`}
+                                                className="w-11 h-11 flex items-center justify-center text-slate-600 hover:text-blue-600 hover:bg-blue-50 active:bg-blue-100 rounded-r-xl transition-colors duration-150"
+                                            >
+                                                <IconPlus className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-700">{rp(item.selling_price * item.qty)}</span>
                                     </div>
                                 </div>
                             ))
@@ -686,12 +715,15 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                     </div>
 
                     {/* bagian bawah: diskon, rincian, nominal & bayar */}
-                    <div className="border-t border-slate-100 pt-4 space-y-3.5 shrink-0">
+                    <div className="border-t border-slate-200 pt-4 space-y-4 shrink-0">
                         {/* PILIH DISKON */}
                         <div>
-                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Pilih Promo / Diskon</label>
+                            <label htmlFor="pos-diskon" className="block text-xs font-semibold text-slate-700 mb-1.5">
+                                Pilih Promo / Diskon
+                            </label>
                             <select
-                                className="w-full rounded-xl border-slate-200 bg-slate-50 text-xs py-2 px-3 transition duration-200 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                                id="pos-diskon"
+                                className="w-full min-h-[44px] rounded-xl border-slate-200 bg-slate-50 text-base sm:text-sm py-2 px-3 transition duration-150 hover:border-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
                                 value={selectedDiscountId}
                                 onChange={(e) => setSelectedDiscountId(e.target.value)}
                             >
@@ -703,36 +735,36 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                                 ))}
                             </select>
                             {activeDiscountObj && grossTotal < parseFloat(activeDiscountObj.min_purchase) && (
-                                <p className="sc-pop text-[10px] text-red-500 font-semibold mt-1">
-                                    * Min. belanja Rp {Number(activeDiscountObj.min_purchase).toLocaleString('id-ID')}
+                                <p role="alert" className="sc-pop text-xs text-red-600 font-semibold mt-1.5">
+                                    Minimal belanja Rp {Number(activeDiscountObj.min_purchase).toLocaleString('id-ID')} untuk promo ini.
                                 </p>
                             )}
                         </div>
 
                         {/* RINCIAN HARGA */}
-                        <div className="text-xs space-y-2">
-                            <div className="flex justify-between text-slate-500">
+                        <div className="text-sm space-y-2">
+                            <div className="flex justify-between text-slate-600">
                                 <span>Subtotal</span>
                                 <span className="font-semibold text-slate-700">{rp(grossTotal)}</span>
                             </div>
                             {discountAmount > 0 && (
-                                <div className="sc-pop flex justify-between text-emerald-600 font-semibold">
+                                <div className="sc-pop flex justify-between text-emerald-700 font-semibold">
                                     <span>Diskon ({activeDiscountObj?.name})</span>
                                     <span>- {rp(discountAmount)}</span>
                                 </div>
                             )}
                             <div className="flex justify-between items-end border-t border-dashed border-slate-200 pt-3">
                                 <span className="text-sm font-extrabold text-[#14214f]">Total</span>
-                                <span key={totalPrice} className="sc-pop text-xl font-extrabold text-blue-600 tracking-tight">
+                                <span key={totalPrice} aria-live="polite" className="sc-pop text-xl font-extrabold text-blue-600 tracking-tight">
                                     {rp(totalPrice)}
                                 </span>
                             </div>
                         </div>
 
                         {/* UANG DITERIMA */}
-                        <div className="bg-blue-50 border border-blue-100 px-3.5 py-2.5 rounded-xl flex justify-between items-center">
+                        <div className="bg-blue-50 border border-blue-100 pl-4 pr-2.5 py-2.5 rounded-xl flex justify-between items-center gap-3">
                             <div>
-                                <span className="block text-[10px] text-slate-500 font-semibold">Uang Diterima</span>
+                                <span className="block text-xs text-slate-600 font-semibold">Uang Diterima</span>
                                 <span key={payAmount} className="sc-pop inline-block text-base font-extrabold text-blue-700">
                                     {rp(payAmount)}
                                 </span>
@@ -740,7 +772,7 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                             <button
                                 type="button"
                                 onClick={handleResetMoney}
-                                className="text-[11px] bg-white border border-red-100 hover:bg-red-500 hover:text-white hover:border-red-500 text-red-600 font-bold px-3 py-1.5 rounded-lg shadow-sm transition duration-200 active:scale-90"
+                                className="min-h-[44px] text-xs bg-white border border-red-200 hover:bg-red-500 hover:text-white hover:border-red-500 active:brightness-90 text-red-600 font-bold px-4 rounded-xl shadow-sm transition-colors duration-150"
                             >
                                 Reset (C)
                             </button>
@@ -748,14 +780,15 @@ export default function Index({ auth, products = [], categories = [], activeDisc
 
                         {/* PINTASAN NOMINAL UANG (AKUMULASI) & UANG PAS */}
                         <div>
-                            <span className="block text-[10px] font-semibold text-slate-500 mb-1.5">Pintasan Tambah Nominal</span>
-                            <div className="grid grid-cols-3 gap-1.5">
+                            <span className="block text-xs font-semibold text-slate-600 mb-2">Pintasan Tambah Nominal</span>
+                            <div className="grid grid-cols-3 gap-2">
                                 {[500, 1000, 2000, 5000, 10000, 20000, 50000, 100000].map((nominal) => (
                                     <button
                                         key={nominal}
                                         type="button"
                                         onClick={() => handleAddMoney(nominal)}
-                                        className="bg-white border border-slate-200 text-slate-700 text-[11px] font-bold py-2 rounded-xl transition duration-200 hover:bg-blue-600 hover:border-blue-600 hover:text-white hover:-translate-y-0.5 hover:shadow-md hover:shadow-blue-600/25 active:scale-90"
+                                        aria-label={`Tambah uang diterima Rp ${nominal.toLocaleString('id-ID')}`}
+                                        className="min-h-[44px] bg-white border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors duration-150 hover:bg-blue-600 hover:border-blue-600 hover:text-white active:brightness-90"
                                     >
                                         +{nominal >= 1000 ? `${nominal / 1000}rb` : nominal}
                                     </button>
@@ -764,7 +797,7 @@ export default function Index({ auth, products = [], categories = [], activeDisc
                                     type="button"
                                     onClick={handleExactMoney}
                                     disabled={cart.length === 0}
-                                    className="bg-emerald-50 border border-emerald-300 text-emerald-700 text-[11px] font-extrabold py-2 rounded-xl transition duration-200 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white hover:-translate-y-0.5 hover:shadow-md hover:shadow-emerald-500/25 active:scale-90 disabled:opacity-40 disabled:pointer-events-none"
+                                    className="min-h-[44px] bg-emerald-50 border border-emerald-300 text-emerald-700 text-xs font-extrabold rounded-xl transition-colors duration-150 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white active:brightness-90 disabled:bg-slate-100 disabled:border-slate-200 disabled:text-slate-500 disabled:hover:bg-slate-100 disabled:hover:text-slate-500 disabled:cursor-not-allowed"
                                 >
                                     Uang Pas
                                 </button>
@@ -773,34 +806,63 @@ export default function Index({ auth, products = [], categories = [], activeDisc
 
                         {/* KEMBALIAN */}
                         {payAmount > 0 && (
-                            <div className="sc-pop flex justify-between items-center text-xs font-semibold px-1">
-                                <span className="text-slate-500">Kembalian</span>
-                                <span className={`text-sm font-extrabold ${changeAmount >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            <div aria-live="polite" className="sc-pop flex justify-between items-center text-sm font-semibold px-1">
+                                <span className="text-slate-600">{changeAmount < 0 ? 'Kurang' : 'Kembalian'}</span>
+                                <span className={`text-base font-extrabold ${changeAmount >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
                                     {changeAmount < 0 ? `- ${rp(Math.abs(changeAmount))}` : rp(changeAmount)}
                                 </span>
                             </div>
                         )}
 
                         {/* BAYAR */}
+                        <div>
+                            <button
+                                type="button"
+                                onClick={handleCheckout}
+                                disabled={cannotPay}
+                                aria-busy={processing}
+                                aria-describedby={cannotPay && !processing ? 'bayar-info' : undefined}
+                                className="w-full min-h-[52px] flex items-center justify-center gap-2.5 rounded-xl font-extrabold text-sm text-white bg-blue-600 transition-colors duration-150 hover:bg-blue-700 active:brightness-90 disabled:bg-slate-200 disabled:text-slate-500 disabled:cursor-not-allowed disabled:hover:bg-slate-200"
+                            >
+                                {processing ? (
+                                    <svg viewBox="0 0 24 24" className="sc-spin w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+                                        <path d="M12 3a9 9 0 1 0 9 9" />
+                                    </svg>
+                                ) : (
+                                    <IconCard />
+                                )}
+                                {processing ? 'Memproses...' : 'Bayar & Cetak Struk'}
+                                {!processing && <IconChevronRight className="w-4 h-4" />}
+                            </button>
+                            {cannotPay && !processing && (
+                                <p id="bayar-info" className="mt-2 text-center text-xs text-slate-500">
+                                    {cart.length === 0 ? 'Tambahkan produk ke keranjang dahulu.' : 'Uang diterima belum cukup untuk membayar total.'}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            {/* RINGKASAN KERANJANG (HP & tablet): selalu terlihat, tanpa menutupi konten */}
+            {cart.length > 0 && (
+                <div className="xl:hidden fixed inset-x-0 bottom-0 z-40 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                    <div className="bg-white border border-slate-200 shadow-lg rounded-2xl p-2.5 pl-4 flex items-center gap-3">
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs text-slate-600">{totalItems} barang di keranjang</p>
+                            <p className="text-base font-extrabold text-blue-600 truncate">{rp(totalPrice)}</p>
+                        </div>
                         <button
                             type="button"
-                            onClick={handleCheckout}
-                            disabled={cannotPay}
-                            className={`group w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-extrabold text-sm text-white bg-blue-600 transition duration-200 hover:bg-blue-700 hover:-translate-y-0.5 active:scale-[.98] disabled:bg-slate-300 disabled:translate-y-0 disabled:cursor-not-allowed`}
+                            onClick={goToCart}
+                            className="inline-flex items-center gap-2 min-h-[44px] px-5 rounded-xl bg-blue-600 hover:bg-blue-700 active:brightness-90 text-white text-sm font-bold transition-colors duration-150"
                         >
-                            {processing ? (
-                                <svg viewBox="0 0 24 24" className="sc-spin w-4 h-4" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
-                                    <path d="M12 3a9 9 0 1 0 9 9" />
-                                </svg>
-                            ) : (
-                                <IconCard />
-                            )}
-                            {processing ? 'Memproses...' : 'Bayar & Cetak Struk'}
-                            {!processing && <IconChevronRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />}
+                            <IconCart className="w-[18px] h-[18px]" />
+                            Lihat Keranjang
                         </button>
                     </div>
                 </div>
-            </div>
+            )}
         </AuthenticatedLayout>
     );
 }
